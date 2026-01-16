@@ -7,6 +7,8 @@ import datetime
 import glob
 import re
 import time
+import subprocess
+from contextlib import contextmanager
 from typing import Optional
 from slice_and_assemble import assemble_from_manifest
 from archive_card import (
@@ -50,6 +52,44 @@ def resolve_env_path(env_key, default_value):
     raw_value = os.getenv(env_key)
     value = raw_value if raw_value else default_value
     return os.path.abspath(os.path.expanduser(value))
+
+
+def send_mac_notification(title, message):
+    try:
+        subprocess.run(
+            [
+                "osascript",
+                "-e",
+                f'display notification "{message}" with title "{title}"',
+            ],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
+
+
+@contextmanager
+def prevent_sleep(reason):
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            ["caffeinate", "-dimsu"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        yield
+    finally:
+        if proc and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=3)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
 
 
 DRIVE_PATH = resolve_env_path(
@@ -742,334 +782,414 @@ async def on_command_error(ctx, error):
 
 @bot.command()
 async def upload(ctx):
-    print(f"📤 Upload command received from {ctx.author} in {ctx.channel}.")
-    lot_num = get_next_lot()
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    archive_id = build_archive_id(lot_num, timestamp)
+    async def _run_upload():
+        print(f"📤 Upload command received from {ctx.author} in {ctx.channel}.")
+        lot_num = get_next_lot()
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        archive_id = build_archive_id(lot_num, timestamp)
 
-    archive_channel = await get_archive_channel()
-    if archive_channel is None:
-        await ctx.send("⚠️ Archive channel unavailable. Upload aborted.")
-        return
+        archive_channel = await get_archive_channel()
+        if archive_channel is None:
+            await ctx.send("⚠️ Archive channel unavailable. Upload aborted.")
+            return
 
-    files_to_upload = list_upload_files()
-    if not files_to_upload:
-        print("⚠️ No files found to upload.")
-        await ctx.send("⚠️ No files found in the upload folder.")
-        return
+        files_to_upload = list_upload_files()
+        if not files_to_upload:
+            print("⚠️ No files found to upload.")
+            await ctx.send("⚠️ No files found in the upload folder.")
+            return
 
-    original_names = read_manifest_original_names(UPLOAD_FOLDER)
-    files_display = original_names if original_names else [
-        os.path.basename(p) for p in files_to_upload]
-    total_size_bytes = calculate_total_size(files_to_upload)
-    chunk_count = len(files_to_upload)
-    file_count = len(original_names) if original_names else None
+        original_names = read_manifest_original_names(UPLOAD_FOLDER)
+        files_display = original_names if original_names else [
+            os.path.basename(p) for p in files_to_upload]
+        total_size_bytes = calculate_total_size(files_to_upload)
+        chunk_count = len(files_to_upload)
+        file_count = len(original_names) if original_names else None
 
-    metadata = {
-        "lot": lot_num,
-        "archive_id": archive_id,
-        "timestamp": timestamp,
-        "status": "partial",
-        "file_count": file_count,
-        "total_size_bytes": total_size_bytes,
-        "uploaded_files": [],
-        "failed_files": [],
-        "message_ids": [],
-        "chunk_count": chunk_count,
-        "files_display": files_display,
-        "uploader": str(ctx.author),
-        "archive_channel_id": ARCHIVE_CHANNEL_ID,
-        "storage_channel_id": STORAGE_CHANNEL_ID,
-    }
+        metadata = {
+            "lot": lot_num,
+            "archive_id": archive_id,
+            "timestamp": timestamp,
+            "status": "partial",
+            "file_count": file_count,
+            "total_size_bytes": total_size_bytes,
+            "uploaded_files": [],
+            "failed_files": [],
+            "message_ids": [],
+            "chunk_count": chunk_count,
+            "files_display": files_display,
+            "uploader": str(ctx.author),
+            "archive_channel_id": ARCHIVE_CHANNEL_ID,
+            "storage_channel_id": STORAGE_CHANNEL_ID,
+        }
 
-    archive_message = await create_archive_card(archive_channel, archive_id, metadata)
-    try:
-        thread = await archive_message.create_thread(
-            name=f"{archive_id} chunks",
-            auto_archive_duration=1440,
-        )
-    except Exception as e:
-        await ctx.send(f"⚠️ Failed to create archive thread: {e}")
-        return
-
-    await ctx.send(
-        f"📦 Archive card created: {archive_id}. Uploading {chunk_count} chunk(s) "
-        f"({format_bytes(total_size_bytes)})..."
-    )
-
-    uploaded_message_ids = []
-    uploaded_files = []
-    failed_files = []
-    errors = {}
-    uploaded_bytes = 0
-    last_edit = 0.0
-
-    print(f"📦 Uploading {chunk_count} file(s) to thread {thread.id}...")
-    for index, file_path in enumerate(files_to_upload, start=1):
-        file_name = os.path.basename(file_path)
-        print(f"⬆️ Uploading file: {file_name}")
+        archive_message = await create_archive_card(archive_channel, archive_id, metadata)
         try:
-            discord_file = discord.File(file_path)
-            msg = await thread.send(file=discord_file)
-            uploaded_message_ids.append(msg.id)
-            uploaded_files.append(file_name)
-            try:
-                uploaded_bytes += os.path.getsize(file_path)
-            except OSError:
-                pass
-            try:
-                os.remove(file_path)
-                print(f"🗑️ Removed uploaded file: {file_name}")
-            except OSError as e:
-                print(f"⚠️ Could not delete {file_name} after upload: {e}")
-        except Exception as e:
-            failed_files.append(file_name)
-            errors[file_name] = str(e)
-            print(f"❌ Failed to upload {file_name}: {e}")
-
-        now = time.monotonic()
-        if now - last_edit > 1.2 or index == chunk_count:
-            metadata.update(
-                {
-                    "uploaded_files": uploaded_files,
-                    "failed_files": failed_files,
-                    "message_ids": uploaded_message_ids[:150],
-                    "thread_id": thread.id,
-                    "progress_text": build_progress_text(index, chunk_count, uploaded_bytes, total_size_bytes),
-                }
+            thread = await archive_message.create_thread(
+                name=f"{archive_id} chunks",
+                auto_archive_duration=1440,
             )
-            try:
-                await update_archive_card(archive_message, metadata)
-                last_edit = now
-            except Exception as e:
-                print(f"⚠️ Failed to update archive card: {e}")
+        except Exception as e:
+            await ctx.send(f"⚠️ Failed to create archive thread: {e}")
+            return
 
-    if failed_files:
-        status = "partial" if uploaded_files else "failed"
-    else:
-        status = "success"
+        await ctx.send(
+            f"📦 Archive card created: {archive_id}. Uploading {chunk_count} chunk(s) "
+            f"({format_bytes(total_size_bytes)})..."
+        )
 
-    metadata.update(
-        {
+        uploaded_message_ids = []
+        uploaded_files = []
+        failed_files = []
+        errors = {}
+        uploaded_bytes = 0
+        last_edit = 0.0
+        completed_count = 0
+        upload_lock = asyncio.Lock()
+        semaphore = asyncio.Semaphore(5)
+
+        async def upload_chunk(file_path):
+            nonlocal uploaded_bytes, last_edit, completed_count
+            file_name = os.path.basename(file_path)
+            print(f"⬆️ Uploading file: {file_name}")
+            async with semaphore:
+                try:
+                    discord_file = discord.File(file_path)
+                    msg = await thread.send(file=discord_file)
+                    size_bytes = None
+                    try:
+                        size_bytes = os.path.getsize(file_path)
+                    except OSError:
+                        pass
+                    try:
+                        os.remove(file_path)
+                        print(f"🗑️ Removed uploaded file: {file_name}")
+                    except OSError as e:
+                        print(
+                            f"⚠️ Could not delete {file_name} after upload: {e}")
+                except Exception as e:
+                    async with upload_lock:
+                        failed_files.append(file_name)
+                        errors[file_name] = str(e)
+                        completed_count += 1
+                        now = time.monotonic()
+                        if now - last_edit > 1.2 or completed_count == chunk_count:
+                            metadata.update(
+                                {
+                                    "uploaded_files": uploaded_files,
+                                    "failed_files": failed_files,
+                                    "message_ids": uploaded_message_ids[:150],
+                                    "thread_id": thread.id,
+                                    "progress_text": build_progress_text(
+                                        completed_count,
+                                        chunk_count,
+                                        uploaded_bytes,
+                                        total_size_bytes,
+                                    ),
+                                }
+                            )
+                            try:
+                                await update_archive_card(archive_message, metadata)
+                                last_edit = now
+                            except Exception as exc:
+                                print(
+                                    f"⚠️ Failed to update archive card: {exc}")
+                    print(f"❌ Failed to upload {file_name}: {e}")
+                    return
+
+            async with upload_lock:
+                uploaded_message_ids.append(msg.id)
+                uploaded_files.append(file_name)
+                if size_bytes is not None:
+                    uploaded_bytes += size_bytes
+                completed_count += 1
+                now = time.monotonic()
+                if now - last_edit > 1.2 or completed_count == chunk_count:
+                    metadata.update(
+                        {
+                            "uploaded_files": uploaded_files,
+                            "failed_files": failed_files,
+                            "message_ids": uploaded_message_ids[:150],
+                            "thread_id": thread.id,
+                            "progress_text": build_progress_text(
+                                completed_count,
+                                chunk_count,
+                                uploaded_bytes,
+                                total_size_bytes,
+                            ),
+                        }
+                    )
+                    try:
+                        await update_archive_card(archive_message, metadata)
+                        last_edit = now
+                    except Exception as exc:
+                        print(f"⚠️ Failed to update archive card: {exc}")
+
+        print(f"📦 Uploading {chunk_count} file(s) to thread {thread.id}...")
+        tasks = [upload_chunk(file_path) for file_path in files_to_upload]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        if failed_files:
+            status = "partial" if uploaded_files else "failed"
+        else:
+            status = "success"
+
+        metadata.update(
+            {
+                "status": status,
+                "uploaded_files": uploaded_files,
+                "failed_files": failed_files,
+                "message_ids": uploaded_message_ids[:150],
+                "thread_id": thread.id,
+            }
+        )
+        metadata.pop("progress_text", None)
+        if errors:
+            metadata["errors"] = errors
+
+        try:
+            await update_archive_card(archive_message, metadata)
+        except Exception as e:
+            print(f"⚠️ Failed to finalize archive card: {e}")
+
+        entry = {
+            "lot": lot_num,
+            "archive_id": archive_id,
+            "timestamp": timestamp,
+            "message_ids": uploaded_message_ids,
             "status": status,
+            "file_count": file_count,
+            "total_size_bytes": total_size_bytes,
             "uploaded_files": uploaded_files,
             "failed_files": failed_files,
-            "message_ids": uploaded_message_ids[:150],
             "thread_id": thread.id,
+            "archive_message_id": archive_message.id,
+            "archive_channel_id": ARCHIVE_CHANNEL_ID,
+            "storage_channel_id": STORAGE_CHANNEL_ID,
+            "chunk_count": chunk_count,
         }
-    )
-    metadata.pop("progress_text", None)
-    if errors:
-        metadata["errors"] = errors
+        if errors:
+            entry["errors"] = errors
+        await append_log(entry)
+        send_mac_notification(
+            "Discord Drive Upload Complete",
+            f"{archive_id}: {status.upper()} • {len(uploaded_files)}/{chunk_count} uploaded",
+        )
 
-    try:
-        await update_archive_card(archive_message, metadata)
-    except Exception as e:
-        print(f"⚠️ Failed to finalize archive card: {e}")
-
-    entry = {
-        "lot": lot_num,
-        "archive_id": archive_id,
-        "timestamp": timestamp,
-        "message_ids": uploaded_message_ids,
-        "status": status,
-        "file_count": file_count,
-        "total_size_bytes": total_size_bytes,
-        "uploaded_files": uploaded_files,
-        "failed_files": failed_files,
-        "thread_id": thread.id,
-        "archive_message_id": archive_message.id,
-        "archive_channel_id": ARCHIVE_CHANNEL_ID,
-        "storage_channel_id": STORAGE_CHANNEL_ID,
-        "chunk_count": chunk_count,
-    }
-    if errors:
-        entry["errors"] = errors
-    await append_log(entry)
-
-    if status == "success":
-        print(f"✅ Upload complete for Archive {archive_id}.")
-        database_channel = await get_database_channel()
-        if database_channel is not None:
-            try:
-                await database_channel.send(
-                    build_database_entry_text(
-                        archive_id,
-                        timestamp,
-                        file_count or len(uploaded_files),
-                        total_size_bytes,
+        if status == "success":
+            print(f"✅ Upload complete for Archive {archive_id}.")
+            database_channel = await get_database_channel()
+            if database_channel is not None:
+                try:
+                    await database_channel.send(
+                        build_database_entry_text(
+                            archive_id,
+                            timestamp,
+                            file_count or len(uploaded_files),
+                            total_size_bytes,
+                        )
                     )
-                )
-            except Exception as e:
-                print(f"⚠️ Failed to write database entry: {e}")
-        try:
-            await archive_message.pin()
-        except Exception:
-            pass
-        await ctx.send(
-            f"✅ Archive {archive_id} uploaded successfully.\n"
-            f"🔒 Encryption: {'Enabled' if USER_KEY else 'Disabled'}\n"
-            f"📦 Chunks: {chunk_count} • Size: {format_bytes(total_size_bytes)}"
-        )
-    else:
-        print(f"⚠️ Upload completed with errors for Archive {archive_id}.")
-        await ctx.send(
-            f"⚠️ Archive {archive_id} uploaded with errors.\n"
-            f"✅ Uploaded: {len(uploaded_files)}/{chunk_count} • "
-            f"Size: {format_bytes(total_size_bytes)}\n"
-            "🔁 Use `!resume` to continue."
-        )
+                except Exception as e:
+                    print(f"⚠️ Failed to write database entry: {e}")
+            try:
+                await archive_message.pin()
+            except Exception:
+                pass
+            await ctx.send(
+                f"✅ Archive {archive_id} uploaded successfully.\n"
+                f"🔒 Encryption: {'Enabled' if USER_KEY else 'Disabled'}\n"
+                f"📦 Chunks: {chunk_count} • Size: {format_bytes(total_size_bytes)}"
+            )
+        else:
+            print(f"⚠️ Upload completed with errors for Archive {archive_id}.")
+            await ctx.send(
+                f"⚠️ Archive {archive_id} uploaded with errors.\n"
+                f"✅ Uploaded: {len(uploaded_files)}/{chunk_count} • "
+                f"Size: {format_bytes(total_size_bytes)}\n"
+                "🔁 Use `!resume` to continue."
+            )
+
+    with prevent_sleep("upload"):
+        await _run_upload()
 
 
 @bot.command()
 async def download(ctx, start: str, end: Optional[str] = None):
-    print(f"📥 Download command received from {ctx.author} in {ctx.channel}.")
+    async def _run_download():
+        print(
+            f"📥 Download command received from {ctx.author} in {ctx.channel}.")
 
-    if not os.path.exists(LOG_FILE):
-        print("❌ No log file found; cannot download.")
-        await ctx.send("No log file found.")
-        return
+        if not os.path.exists(LOG_FILE):
+            print("❌ No log file found; cannot download.")
+            await ctx.send("No log file found.")
+            return
 
-    logs = load_logs()
-    if not logs:
-        rebuilt = await rebuild_log_from_archive_channel()
-        if rebuilt:
-            logs = load_logs()
+        logs = load_logs()
+        if not logs:
+            rebuilt = await rebuild_log_from_archive_channel()
+            if rebuilt:
+                logs = load_logs()
 
-    lot_start, start_id, error = resolve_download_target(start, logs)
-    if error:
-        await ctx.send(f"⚠️ {error}\n\n{build_commands_markdown()}")
-        return
-    lot_end = None
-    end_id = None
-    if end is not None:
-        lot_end, end_id, error = resolve_download_target(end, logs)
+        lot_start, start_id, error = resolve_download_target(start, logs)
         if error:
             await ctx.send(f"⚠️ {error}\n\n{build_commands_markdown()}")
             return
-    if lot_end is None:
-        lot_end = lot_start
-    if lot_start > lot_end:
-        lot_start, lot_end = lot_end, lot_start
+        lot_end = None
+        end_id = None
+        if end is not None:
+            lot_end, end_id, error = resolve_download_target(end, logs)
+            if error:
+                await ctx.send(f"⚠️ {error}\n\n{build_commands_markdown()}")
+                return
+        if lot_end is None:
+            lot_end = lot_start
+        if lot_start > lot_end:
+            lot_start, lot_end = lot_end, lot_start
 
-    start_label = start_id or get_archive_id_by_lot(logs, lot_start)
-    end_label = end_id or get_archive_id_by_lot(logs, lot_end)
+        start_label = start_id or get_archive_id_by_lot(logs, lot_start)
+        end_label = end_id or get_archive_id_by_lot(logs, lot_end)
 
-    # Filter logs for the requested range
-    target_lots = []
-    for entry in logs:
-        lot_value = entry.get("lot")
-        if lot_value is None:
-            continue
-        try:
-            lot_number = int(lot_value)
-        except (TypeError, ValueError):
-            continue
-        if lot_start <= lot_number <= lot_end:
-            target_lots.append(entry)
-
-    if not target_lots:
-        print(f"⚠️ No data found for download range {lot_start}-{lot_end}.")
-        await ctx.send("⚠️ No data found for the requested range.")
-        return
-
-    total_expected_files = sum(
-        entry.get("file_count", 0) for entry in target_lots if isinstance(entry.get("file_count"), int)
-    )
-    total_expected_text = (
-        f"{total_expected_files} files"
-        if total_expected_files > 0
-        else "unknown file count"
-    )
-    await ctx.send(
-        f"📥 Starting download {start_label} to {end_label} "
-        f"({len(target_lots)} archive(s), {total_expected_text})."
-    )
-
-    print(
-        f"📦 Preparing download for {len(target_lots)} lot(s) into {DOWNLOAD_FOLDER}...")
-    total_lots = len(target_lots)
-    for index, lot_data in enumerate(target_lots, start=1):
-        archive_id = get_archive_id_from_entry(lot_data)
-        print(
-            f"⏳ Processing {index}/{total_lots} Lots (Archive {archive_id})...")
-        archive_folder = f"[Archive] {archive_id}"
-        lot_dir = os.path.join(DOWNLOAD_FOLDER, archive_folder)
-        legacy_dir = os.path.join(DOWNLOAD_FOLDER, f"Lot_{lot_data['lot']}")
-        if not os.path.exists(lot_dir) and os.path.exists(legacy_dir):
+        # Filter logs for the requested range
+        target_lots = []
+        for entry in logs:
+            lot_value = entry.get("lot")
+            if lot_value is None:
+                continue
             try:
-                os.rename(legacy_dir, lot_dir)
-            except OSError as e:
-                print(f"⚠️ Could not rename {legacy_dir} to {lot_dir}: {e}")
-        os.makedirs(lot_dir, exist_ok=True)
+                lot_number = int(lot_value)
+            except (TypeError, ValueError):
+                continue
+            if lot_start <= lot_number <= lot_end:
+                target_lots.append(entry)
 
-        archive_message = await find_archive_card_by_id(archive_id)
-        archive_metadata = parse_archive_card(
-            archive_message) if archive_message else None
+        if not target_lots:
+            print(
+                f"⚠️ No data found for download range {lot_start}-{lot_end}.")
+            await ctx.send("⚠️ No data found for the requested range.")
+            return
 
-        archive_size_bytes = (
-            (archive_metadata or {}).get("total_size_bytes")
-            if archive_metadata
-            else lot_data.get("total_size_bytes")
+        total_expected_files = sum(
+            entry.get("file_count", 0) for entry in target_lots if isinstance(entry.get("file_count"), int)
         )
-        archive_size_text = format_bytes(
-            archive_size_bytes) if archive_size_bytes is not None else "Unknown size"
-        archive_file_count = (
-            (archive_metadata or {}).get("file_count")
-            if archive_metadata
-            else lot_data.get("file_count")
-        )
-        archive_file_text = (
-            f"{archive_file_count} files" if isinstance(
-                archive_file_count, int) else "Unknown file count"
+        total_expected_text = (
+            f"{total_expected_files} files"
+            if total_expected_files > 0
+            else "unknown file count"
         )
         await ctx.send(
-            f"📦 **Downloading Archive: {archive_id}**\n"
-            f"📄 {archive_file_text} • 📦 {archive_size_text}"
+            f"📥 Starting download {start_label} to {end_label} "
+            f"({len(target_lots)} archive(s), {total_expected_text})."
         )
 
-        expected_total_files = (
-            (archive_metadata or {}).get("chunk_count")
-            or lot_data.get("chunk_count")
-            or lot_data.get("file_count")
-        )
-
-        thread_id = (
-            (archive_metadata or {}).get("thread_id")
-            if archive_metadata
-            else lot_data.get("thread_id")
-        )
-        if thread_id:
-            try:
-                thread = await bot.fetch_channel(thread_id)
-            except Exception as e:
-                print(f"⚠️ Could not fetch archive thread {thread_id}: {e}")
-                thread = None
-        else:
-            thread = None
-
-        if thread is not None:
-            success_count, failed_count, skipped_count, final_total = await download_from_thread(
-                thread, lot_dir, expected_total_files
-            )
-        else:
-            # Legacy fallback: fetch the messages using saved IDs
-            success_count = 0
-            failed_count = 0
-            skipped_count = 0
-            total_files_known = 0
-            storage_channel = await get_storage_channel(ctx)
-            if storage_channel is None:
-                storage_channel = ctx.channel
-            for msg_id in lot_data.get("message_ids", []):
+        print(
+            f"📦 Preparing download for {len(target_lots)} lot(s) into {DOWNLOAD_FOLDER}...")
+        total_lots = len(target_lots)
+        for index, lot_data in enumerate(target_lots, start=1):
+            archive_id = get_archive_id_from_entry(lot_data)
+            print(
+                f"⏳ Processing {index}/{total_lots} Lots (Archive {archive_id})...")
+            archive_folder = f"[Archive] {archive_id}"
+            lot_dir = os.path.join(DOWNLOAD_FOLDER, archive_folder)
+            legacy_dir = os.path.join(
+                DOWNLOAD_FOLDER, f"Lot_{lot_data['lot']}")
+            if not os.path.exists(lot_dir) and os.path.exists(legacy_dir):
                 try:
-                    msg = await storage_channel.fetch_message(msg_id)
-                    if expected_total_files is None:
-                        total_files_known += len(msg.attachments)
-                    for attachment in msg.attachments:
-                        file_path = os.path.join(lot_dir, attachment.filename)
-                        if os.path.exists(file_path):
-                            skipped_count += 1
+                    os.rename(legacy_dir, lot_dir)
+                except OSError as e:
+                    print(
+                        f"⚠️ Could not rename {legacy_dir} to {lot_dir}: {e}")
+            os.makedirs(lot_dir, exist_ok=True)
+
+            archive_message = await find_archive_card_by_id(archive_id)
+            archive_metadata = parse_archive_card(
+                archive_message) if archive_message else None
+
+            archive_size_bytes = (
+                (archive_metadata or {}).get("total_size_bytes")
+                if archive_metadata
+                else lot_data.get("total_size_bytes")
+            )
+            archive_size_text = format_bytes(
+                archive_size_bytes) if archive_size_bytes is not None else "Unknown size"
+            archive_file_count = (
+                (archive_metadata or {}).get("file_count")
+                if archive_metadata
+                else lot_data.get("file_count")
+            )
+            archive_file_text = (
+                f"{archive_file_count} files" if isinstance(
+                    archive_file_count, int) else "Unknown file count"
+            )
+            await ctx.send(
+                f"📦 **Downloading Archive: {archive_id}**\n"
+                f"📄 {archive_file_text} • 📦 {archive_size_text}"
+            )
+
+            expected_total_files = (
+                (archive_metadata or {}).get("chunk_count")
+                or lot_data.get("chunk_count")
+                or lot_data.get("file_count")
+            )
+
+            thread_id = (
+                (archive_metadata or {}).get("thread_id")
+                if archive_metadata
+                else lot_data.get("thread_id")
+            )
+            if thread_id:
+                try:
+                    thread = await bot.fetch_channel(thread_id)
+                except Exception as e:
+                    print(
+                        f"⚠️ Could not fetch archive thread {thread_id}: {e}")
+                    thread = None
+            else:
+                thread = None
+
+            if thread is not None:
+                success_count, failed_count, skipped_count, final_total = await download_from_thread(
+                    thread, lot_dir, expected_total_files
+                )
+            else:
+                # Legacy fallback: fetch the messages using saved IDs
+                success_count = 0
+                failed_count = 0
+                skipped_count = 0
+                total_files_known = 0
+                storage_channel = await get_storage_channel(ctx)
+                if storage_channel is None:
+                    storage_channel = ctx.channel
+                for msg_id in lot_data.get("message_ids", []):
+                    try:
+                        msg = await storage_channel.fetch_message(msg_id)
+                        if expected_total_files is None:
+                            total_files_known += len(msg.attachments)
+                        for attachment in msg.attachments:
+                            file_path = os.path.join(
+                                lot_dir, attachment.filename)
+                            if os.path.exists(file_path):
+                                skipped_count += 1
+                                total_files = expected_total_files if expected_total_files is not None else total_files_known
+                                left = max(total_files - (success_count +
+                                           failed_count + skipped_count), 0)
+                                print(
+                                    f"📥 Downloaded {success_count}/{total_files} files "
+                                    f"(✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • ⏳ {left} left)"
+                                )
+                                continue
+                            saved = False
+                            for attempt in range(3):
+                                try:
+                                    await attachment.save(file_path)
+                                    saved = True
+                                    success_count += 1
+                                    break
+                                except Exception as e:
+                                    print(
+                                        f"❌ Failed to save {attachment.filename} (attempt {attempt + 1}): {e}")
+                                    await asyncio.sleep(2 ** attempt)
+                            if not saved:
+                                failed_count += 1
                             total_files = expected_total_files if expected_total_files is not None else total_files_known
                             left = max(total_files - (success_count +
                                        failed_count + skipped_count), 0)
@@ -1077,55 +1197,41 @@ async def download(ctx, start: str, end: Optional[str] = None):
                                 f"📥 Downloaded {success_count}/{total_files} files "
                                 f"(✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • ⏳ {left} left)"
                             )
-                            continue
-                        saved = False
-                        for attempt in range(3):
-                            try:
-                                await attachment.save(file_path)
-                                saved = True
-                                success_count += 1
-                                break
-                            except Exception as e:
-                                print(
-                                    f"❌ Failed to save {attachment.filename} (attempt {attempt + 1}): {e}")
-                                await asyncio.sleep(2 ** attempt)
-                        if not saved:
-                            failed_count += 1
-                        total_files = expected_total_files if expected_total_files is not None else total_files_known
-                        left = max(total_files - (success_count +
-                                   failed_count + skipped_count), 0)
-                        print(
-                            f"📥 Downloaded {success_count}/{total_files} files "
-                            f"(✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • ⏳ {left} left)"
-                        )
-                except Exception as e:
-                    print(f"❌ Error downloading message {msg_id}: {e}")
+                    except Exception as e:
+                        print(f"❌ Error downloading message {msg_id}: {e}")
 
-            final_total = expected_total_files if expected_total_files is not None else total_files_known
-        print(
-            f"✅ Archive {archive_id} complete "
-            f"(✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • 📦 {final_total} total)"
+                final_total = expected_total_files if expected_total_files is not None else total_files_known
+            print(
+                f"✅ Archive {archive_id} complete "
+                f"(✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • 📦 {final_total} total)"
+            )
+            if failed_count == 0:
+                await ctx.send(
+                    f"✅ Archive {archive_id} downloaded successfully.\n"
+                    f"📥 Downloaded: {success_count} • ⏭️ Skipped: {skipped_count} • 📦 Total: {final_total}"
+                )
+                if archive_message:
+                    try:
+                        await archive_message.add_reaction("📥")
+                    except Exception:
+                        pass
+                await reassemble_archive(lot_dir, archive_id, ctx)
+            else:
+                await ctx.send(
+                    f"⚠️ Archive {archive_id} downloaded with errors.\n"
+                    f"✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • 📦 {final_total}\n"
+                    "🔁 Re-run `!download` to resume."
+                )
+
+        print(f"✅ Download complete for {start_label} to {end_label}.")
+        await ctx.send(f"✅ Downloaded {start_label} to {end_label} to your local folder.")
+        send_mac_notification(
+            "Discord Drive Download Complete",
+            f"{start_label} → {end_label} finished",
         )
-        if failed_count == 0:
-            await ctx.send(
-                f"✅ Archive {archive_id} downloaded successfully.\n"
-                f"📥 Downloaded: {success_count} • ⏭️ Skipped: {skipped_count} • 📦 Total: {final_total}"
-            )
-            if archive_message:
-                try:
-                    await archive_message.add_reaction("📥")
-                except Exception:
-                    pass
-            await reassemble_archive(lot_dir, archive_id, ctx)
-        else:
-            await ctx.send(
-                f"⚠️ Archive {archive_id} downloaded with errors.\n"
-                f"✅ {success_count} • ❌ {failed_count} • ⏭️ {skipped_count} • 📦 {final_total}\n"
-                "🔁 Re-run `!download` to resume."
-            )
 
-    print(f"✅ Download complete for {start_label} to {end_label}.")
-    await ctx.send(f"✅ Downloaded {start_label} to {end_label} to your local folder.")
+    with prevent_sleep("download"):
+        await _run_download()
 
 
 @bot.command()
