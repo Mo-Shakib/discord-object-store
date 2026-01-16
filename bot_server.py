@@ -12,7 +12,7 @@ DOWNLOAD_FOLDER = '/Volumes/Local Drive/DiscordDrive/Downloads'
 # Gets the directory where main.py actually lives
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_FILE = os.path.join(BASE_DIR, 'lot_history.json')
+LOG_FILE = '/Users/shakib/discord-drive-history.json'
 print(f"🧭 Log file path: {os.path.abspath(LOG_FILE)}")
 
 MANIFEST_PATTERNS = []
@@ -295,6 +295,11 @@ async def upload(ctx):
             msg = await ctx.send(file=discord_file)
             uploaded_message_ids.append(msg.id)
             uploaded_files.append(file_name)
+            try:
+                os.remove(file_path)
+                print(f"🗑️ Removed uploaded file: {file_name}")
+            except OSError as e:
+                print(f"⚠️ Could not delete {file_name} after upload: {e}")
         except Exception as e:
             failed_files.append(file_name)
             errors[file_name] = str(e)
