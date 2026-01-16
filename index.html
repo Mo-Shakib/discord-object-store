@@ -159,7 +159,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <div class="inline-flex items-center px-4 py-2 rounded-full border border-discord-light/20 bg-discord-dark/50 backdrop-blur-sm mb-8 reveal">
                 <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
-                <span class="text-sm font-mono text-discord-light">v2.0.0  Latest Release</span>
+                <span class="text-sm font-mono text-discord-light">v2.0.0 Latest Release</span>
             </div>
 
             <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 reveal" style="transition-delay: 100ms;">
@@ -176,8 +176,8 @@
                 <a href="#setup" class="px-8 py-3 rounded-lg bg-white text-black font-bold text-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-lg shadow-white/10">
                     Get Started
                 </a>
-                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="px-8 py-3 rounded-lg bg-discord-darker border border-discord-divider text-white font-bold text-lg hover:bg-discord-hover transition-all">
-                    <i class="fa-brands fa-github mr-2"></i> GitHub
+                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="px-8 py-3 rounded-lg bg-discord-darker border border-discord-divider text-white font-bold text-lg hover:bg-discord-hover transition-all group">
+                    <i class="fa-regular fa-star mr-2 group-hover:text-yellow-400 transition-colors"></i> Star on GitHub
                 </a>
             </div>
 
@@ -407,6 +407,70 @@ DISCORD_DRIVE_DOWNLOAD_PATH=./downloads</code></pre>
                     </tbody>
                 </table>
             </div>
+        </div>
+    </section>
+
+    <!-- Change Log Section -->
+    <section id="changelog" class="py-24 bg-discord-dark border-t border-discord-divider">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-white mb-10 text-center reveal">Change Log</h2>
+            
+            <div class="relative border-l-2 border-discord-light/20 ml-3 space-y-12 reveal">
+                <!-- v2.0.0 -->
+                <div class="relative pl-8">
+                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-green-500 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2">v2.0.0 <span class="text-sm font-normal text-discord-light ml-2 bg-discord-darker px-2 py-0.5 rounded border border-discord-divider">Latest</span></h3>
+                    <p class="text-discord-light text-sm mb-4">Major security overhaul and architecture improvements.</p>
+                    
+                    <div class="bg-discord-bg rounded-lg border border-discord-divider p-6">
+                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-green-400"></i> New Security Model
+                        </h4>
+                        <ul class="space-y-3 text-sm text-discord-light">
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>Encryption:</strong> AES-256-GCM per chunk.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>Key Derivation:</strong> PBKDF2-HMAC-SHA256 with 600,000 iterations.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>Salt/Nonce:</strong> Per-chunk random 16-byte salt + 12-byte nonce.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>Compression:</strong> Gzip level 9 applied before encryption.</span>
+                            </li>
+                        </ul>
+                        <div class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-200 text-xs flex items-start gap-2">
+                            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                            <p><strong>Important:</strong> If <code>USER_KEY</code> is not set, the slicer refuses to create chunks. The bot will upload unencrypted files only if manually placed in the upload folder.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v1.0.0 -->
+                 <div class="relative pl-8 opacity-60 hover:opacity-100 transition-opacity">
+                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-discord-light/50 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2">v1.0.0</h3>
+                    <p class="text-discord-light text-sm">Initial release with basic chunking, upload/download commands, and archive cards.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Star on GitHub CTA -->
+    <section class="py-16 bg-gradient-to-b from-discord-bg to-discord-darker border-t border-discord-divider">
+        <div class="max-w-4xl mx-auto px-4 text-center reveal">
+            <h3 class="text-2xl font-bold text-white mb-6">Open Source & Community Driven</h3>
+            <p class="text-discord-light mb-8 max-w-2xl mx-auto">
+                This project is free and open source. If you find it useful, please consider starring the repository on GitHub. It helps others discover the project!
+            </p>
+            <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-white text-black font-bold text-lg hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-lg shadow-white/10 group">
+                <i class="fa-regular fa-star group-hover:font-solid transition-all"></i> Star on GitHub
+            </a>
         </div>
     </section>
 
