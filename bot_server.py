@@ -803,46 +803,88 @@ async def upload(ctx):
     errors = {}
     uploaded_bytes = 0
     last_edit = 0.0
+    completed_count = 0
+    upload_lock = asyncio.Lock()
+    semaphore = asyncio.Semaphore(5)
 
-    print(f"📦 Uploading {chunk_count} file(s) to thread {thread.id}...")
-    for index, file_path in enumerate(files_to_upload, start=1):
+    async def upload_chunk(file_path):
+        nonlocal uploaded_bytes, last_edit, completed_count
         file_name = os.path.basename(file_path)
         print(f"⬆️ Uploading file: {file_name}")
-        try:
-            discord_file = discord.File(file_path)
-            msg = await thread.send(file=discord_file)
+        async with semaphore:
+            try:
+                discord_file = discord.File(file_path)
+                msg = await thread.send(file=discord_file)
+                size_bytes = None
+                try:
+                    size_bytes = os.path.getsize(file_path)
+                except OSError:
+                    pass
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Removed uploaded file: {file_name}")
+                except OSError as e:
+                    print(f"⚠️ Could not delete {file_name} after upload: {e}")
+            except Exception as e:
+                async with upload_lock:
+                    failed_files.append(file_name)
+                    errors[file_name] = str(e)
+                    completed_count += 1
+                    now = time.monotonic()
+                    if now - last_edit > 1.2 or completed_count == chunk_count:
+                        metadata.update(
+                            {
+                                "uploaded_files": uploaded_files,
+                                "failed_files": failed_files,
+                                "message_ids": uploaded_message_ids[:150],
+                                "thread_id": thread.id,
+                                "progress_text": build_progress_text(
+                                    completed_count,
+                                    chunk_count,
+                                    uploaded_bytes,
+                                    total_size_bytes,
+                                ),
+                            }
+                        )
+                        try:
+                            await update_archive_card(archive_message, metadata)
+                            last_edit = now
+                        except Exception as exc:
+                            print(f"⚠️ Failed to update archive card: {exc}")
+                print(f"❌ Failed to upload {file_name}: {e}")
+                return
+
+        async with upload_lock:
             uploaded_message_ids.append(msg.id)
             uploaded_files.append(file_name)
-            try:
-                uploaded_bytes += os.path.getsize(file_path)
-            except OSError:
-                pass
-            try:
-                os.remove(file_path)
-                print(f"🗑️ Removed uploaded file: {file_name}")
-            except OSError as e:
-                print(f"⚠️ Could not delete {file_name} after upload: {e}")
-        except Exception as e:
-            failed_files.append(file_name)
-            errors[file_name] = str(e)
-            print(f"❌ Failed to upload {file_name}: {e}")
+            if size_bytes is not None:
+                uploaded_bytes += size_bytes
+            completed_count += 1
+            now = time.monotonic()
+            if now - last_edit > 1.2 or completed_count == chunk_count:
+                metadata.update(
+                    {
+                        "uploaded_files": uploaded_files,
+                        "failed_files": failed_files,
+                        "message_ids": uploaded_message_ids[:150],
+                        "thread_id": thread.id,
+                        "progress_text": build_progress_text(
+                            completed_count,
+                            chunk_count,
+                            uploaded_bytes,
+                            total_size_bytes,
+                        ),
+                    }
+                )
+                try:
+                    await update_archive_card(archive_message, metadata)
+                    last_edit = now
+                except Exception as exc:
+                    print(f"⚠️ Failed to update archive card: {exc}")
 
-        now = time.monotonic()
-        if now - last_edit > 1.2 or index == chunk_count:
-            metadata.update(
-                {
-                    "uploaded_files": uploaded_files,
-                    "failed_files": failed_files,
-                    "message_ids": uploaded_message_ids[:150],
-                    "thread_id": thread.id,
-                    "progress_text": build_progress_text(index, chunk_count, uploaded_bytes, total_size_bytes),
-                }
-            )
-            try:
-                await update_archive_card(archive_message, metadata)
-                last_edit = now
-            except Exception as e:
-                print(f"⚠️ Failed to update archive card: {e}")
+    print(f"📦 Uploading {chunk_count} file(s) to thread {thread.id}...")
+    tasks = [upload_chunk(file_path) for file_path in files_to_upload]
+    await asyncio.gather(*tasks, return_exceptions=True)
 
     if failed_files:
         status = "partial" if uploaded_files else "failed"
