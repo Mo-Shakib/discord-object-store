@@ -232,11 +232,13 @@ def slice_folder(folder_path, chunk_size_mb=9.5):
     output_base_dir.mkdir(parents=True, exist_ok=True)
 
     manifest = {
-        "version": "3.0",
+        "version": "3.1",
         "encrypted": True,
         "compression": "gzip-9",
         "encryption_algorithm": "AES-256-GCM",
         "kdf": "PBKDF2-SHA256-600000",
+        "chunking": "per-chunk",
+        "encryption_scope": "chunk",
         "source_folder": folder.name,
         "files": {},
     }
@@ -266,45 +268,55 @@ def slice_folder(folder_path, chunk_size_mb=9.5):
         print(f"Processing: {file_path.name}")
         print(f"  Original size: {format_bytes(file_size)}")
 
-        with open(file_path, "rb") as file_handle:
-            file_data = file_handle.read()
+        processed_size = 0
+        num_chunks = 0
 
-        try:
-            processed_data = compress_and_encrypt_data(file_data, password)
-            print(
-                f"  After compression+encryption: {format_bytes(len(processed_data))}"
-            )
-        except Exception as exc:
-            print(f"  ❌ Encryption failed: {exc}")
-            continue
-
-        if not processed_data:
-            print("  ❌ Encryption failed: no data returned")
-            continue
-
-        num_chunks = math.ceil(len(processed_data) / chunk_size)
-
-        for i in range(num_chunks):
-            start = i * chunk_size
-            end = min(start + chunk_size, len(processed_data))
-            chunk_data = processed_data[start:end]
+        def _process_chunk(raw_chunk, chunk_index):
+            nonlocal total_chunks, total_processed_size, processed_size, num_chunks
+            try:
+                processed_chunk = compress_and_encrypt_data(
+                    raw_chunk, password)
+            except Exception as exc:
+                print(f"  ❌ Encryption failed: {exc}")
+                return False
+            if not processed_chunk:
+                print("  ❌ Encryption failed: no data returned")
+                return False
 
             total_chunks += 1
-            total_processed_size += len(chunk_data)
+            num_chunks += 1
+            processed_size += len(processed_chunk)
+            total_processed_size += len(processed_chunk)
 
-            chunk_hash = get_chunk_hash(chunk_data)
-            chunk_name = f"{total_chunks:04d}-{file_id}-{chunk_hash}-{i:04d}.bin"
+            chunk_hash = get_chunk_hash(processed_chunk)
+            chunk_name = f"{total_chunks:04d}-{file_id}-{chunk_hash}-{chunk_index:04d}.bin"
             chunk_path = output_base_dir / chunk_name
 
             with open(chunk_path, "wb") as chunk_file:
-                chunk_file.write(chunk_data)
+                chunk_file.write(processed_chunk)
 
             manifest["files"][file_id]["chunks"].append(
-                {"name": chunk_name, "size": len(chunk_data), "index": i}
+                {"name": chunk_name, "size": len(
+                    processed_chunk), "index": chunk_index}
             )
+            return True
+
+        with open(file_path, "rb") as file_handle:
+            chunk_index = 0
+            while True:
+                raw_chunk = file_handle.read(chunk_size)
+                if not raw_chunk:
+                    break
+                if not _process_chunk(raw_chunk, chunk_index):
+                    break
+                chunk_index += 1
+
+        if file_size == 0:
+            if not _process_chunk(b"", 0):
+                continue
 
         if file_size > 0:
-            compression_ratio = (1 - len(processed_data) / file_size) * 100
+            compression_ratio = (1 - processed_size / file_size) * 100
             print(f"  Generated {num_chunks} chunks")
             print(f"  Space saved: {compression_ratio:.1f}%\n")
         else:
@@ -414,6 +426,7 @@ def assemble_from_manifest(chunks_folder_path):
             continue
 
         is_encrypted = bool(manifest.get("encrypted"))
+        encryption_scope = manifest.get("encryption_scope", "file")
         if is_encrypted:
             password = os.getenv("USER_KEY")
             if not password:
@@ -463,6 +476,56 @@ def assemble_from_manifest(chunks_folder_path):
                 chunk_entries = sorted(
                     chunk_entries, key=lambda item: item.get("index", 0)
                 )
+
+            if is_encrypted and encryption_scope == "chunk":
+                total_written = 0
+                try:
+                    with open(target_path, "wb") as out_file:
+                        for chunk_info in chunk_entries:
+                            chunk_name = (
+                                chunk_info
+                                if isinstance(chunk_info, str)
+                                else chunk_info.get("name")
+                            )
+                            if not chunk_name:
+                                raise ValueError(
+                                    "Missing chunk name in manifest entry.")
+                            chunk_path = folder / chunk_name
+                            if not chunk_path.exists():
+                                raise FileNotFoundError(
+                                    f"Missing chunk: {chunk_name}")
+                            with open(chunk_path, "rb") as chunk_file:
+                                encrypted_chunk = chunk_file.read()
+                            try:
+                                original_chunk = decrypt_and_decompress_data(
+                                    encrypted_chunk, password
+                                )
+                            except ValueError as exc:
+                                raise ValueError(
+                                    f"Decryption failed for {chunk_name}: {exc}"
+                                ) from exc
+                            out_file.write(original_chunk)
+                            total_written += len(original_chunk)
+                except Exception as exc:
+                    print(f"   ❌ Error reassembling chunks: {exc}\n")
+                    had_errors = True
+                    continue
+
+                print(
+                    f"   ✓ Reassembled {len(chunk_entries)} chunks ({format_bytes(total_written)})"
+                )
+                print(
+                    f"   ✓ Decrypted and decompressed per chunk"
+                )
+                expected_size = info.get("original_size")
+                if expected_size is not None and total_written != expected_size:
+                    print(
+                        f"   ⚠️  Warning: Size mismatch (expected {format_bytes(expected_size)}, "
+                        f"got {format_bytes(total_written)})"
+                    )
+
+                print(f"   ✅ Successfully restored to: {target_path.name}\n")
+                continue
 
             encrypted_data = bytearray()
             try:
