@@ -1,133 +1,233 @@
 # Discord Object Store
 
-Use a Discord channel as a lightweight, resumable object store with chunked,
-compressed, and optionally encrypted archives. This repo includes:
-- `bot_server.py`: Discord bot that uploads/downloads chunks, tracks history,
-  and can resume failed transfers.
-- `slice_and_assemble.py`: slicer/assembler that creates encrypted chunks and
-  restores files from a manifest.
-- `archive_card.py`: archive card metadata + embed helpers.
+A production-grade, secure object storage system using Discord as a backend. Features AES-256-GCM encryption, Gzip compression, and a modular Python architecture.
 
 ## Features
-- Chunking to fit Discord attachment limits (~9.5 MB default).
-- AES-256-GCM encryption per chunk with PBKDF2 key derivation.
-- Gzip compression (level 9) before encryption.
-- Resumable uploads (`!resume`) and idempotent downloads (`!download`).
-- Archive cards with metadata, progress, and a dedicated thread per archive.
-- Log file backup to a Discord log channel (optional).
-- Archive search, verification, and admin cleanup tools.
 
-## How It Works
-1) `slice_and_assemble.py` slices a folder into encrypted `.bin` chunks plus a
-   JSON manifest. Chunks land in `DISCORD_DRIVE_UPLOAD_PATH`.
-2) `!upload` creates an archive card in the archive channel and a thread to hold
-   the chunks, uploads each file concurrently, and deletes local chunks after
-   successful upload.
-3) A local log file tracks archive ID, lot number, message IDs, and status. If a
-   log channel is configured, it backs up the log file on every update.
-4) `!download` fetches attachments from the archive thread (or legacy message
-   IDs), saves them into `[Archive] #DDMMYY-XX` folders, and resumes by skipping
-   files already on disk.
-5) `slice_and_assemble.py` reassembles the archive using the manifest and
-   decrypts/decompresses each chunk. On a clean restore, the chunks folder is
-   deleted.
+- **🔒 Security**: AES-256-GCM encryption with PBKDF2 key derivation
+- **🗜️ Compression**: Gzip-9 compression for optimal storage efficiency
+- **📦 Chunking**: Intelligent file splitting for Discord's upload limits
+- **🤖 Bot Interface**: Full Discord bot with resume capabilities
+- **📊 Archive Management**: Track, verify, and manage all uploads
+- **🔄 Resumable**: Failed uploads/downloads can be resumed
+- **🏗️ Modular Architecture**: Clean separation of concerns for maintainability
 
-## Security Model
-- **Encryption**: AES-256-GCM per chunk.
-- **Key derivation**: PBKDF2-HMAC-SHA256 with 600,000 iterations.
-- **Salt/nonce**: per-chunk random 16-byte salt + 12-byte nonce.
-- **Compression**: gzip level 9 before encryption.
-- **Important**: if `USER_KEY` is not set, the slicer refuses to create chunks,
-  and the bot will upload unencrypted files if you manually place them in the
-  upload folder.
+## Architecture
 
-## Requirements
-- Python 3.10+
-- `discord.py` and `cryptography`
-- A Discord bot token with Message Content intent enabled
-- A Discord server with channels the bot can read/write attachments
-- Default paths assume macOS + external drive mounted at `/Volumes/Local Drive`
-
-## Setup
-1) Install dependencies:
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -U discord.py
-pip install -r requirements.txt
+```
+discord_object_store/
+├── main.py                    # Entry point (bot or CLI)
+├── src/
+│   ├── config.py             # Centralized configuration
+│   ├── common/               # Shared utilities
+│   │   ├── constants.py
+│   │   ├── utils.py
+│   │   ├── logging.py
+│   │   └── types.py          # Data models
+│   ├── core/                 # Core business logic (pure Python)
+│   │   ├── crypto.py         # AES-GCM encryption
+│   │   ├── compression.py    # Gzip compression
+│   │   ├── chunking.py       # File chunking
+│   │   └── manifest.py       # Manifest handling
+│   ├── services/             # Application services
+│   │   ├── file_system.py    # File I/O operations
+│   │   └── archive_manager.py # Slicing/assembly orchestration
+│   └── bot/                  # Discord interface
+│       ├── client.py         # Bot setup
+│       ├── utils.py          # Bot utilities
+│       ├── ui/
+│       │   └── archive_card.py # Discord embeds
+│       └── cogs/             # Command modules
+│           ├── upload.py
+│           ├── download.py
+│           ├── management.py
+│           └── help.py
 ```
 
-2) Create `.env` in the repo root:
-```bash
-DISCORD_BOT_TOKEN=your-bot-token
-DISCORD_DRIVE_ARCHIVE_CHANNEL_ID=123456789012345678
-USER_KEY=your-strong-passphrase
-```
+## Installation
 
-3) Optional configuration:
-```bash
-# Optional channels
-DISCORD_DRIVE_LOG_CHANNEL_ID=123456789012345678
-DISCORD_DRIVE_STORAGE_CHANNEL_ID=123456789012345678
-DISCORD_DRIVE_DATABASE_CHANNEL_ID=123456789012345678
+### Prerequisites
 
-# Optional paths (default is /Volumes/Local Drive/DiscordDrive/...)
-DISCORD_DRIVE_EXTERNAL_DRIVE_PATH=/Volumes/Local Drive
-DISCORD_DRIVE_UPLOAD_PATH=/Volumes/Local Drive/DiscordDrive/Uploads
-DISCORD_DRIVE_DOWNLOAD_PATH=/Volumes/Local Drive/DiscordDrive/Downloads
-DISCORD_DRIVE_LOG_FILE=/Users/you/discord-drive-history.json
-```
+- Python 3.9 or higher
+- Discord bot token
+- External drive (optional, paths are configurable)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   cd /path/to/discord-object-store
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Create .env file**
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Configure environment variables in `.env`**
+   ```env
+   # Required
+   DISCORD_BOT_TOKEN=your_bot_token_here
+   DISCORD_DRIVE_ARCHIVE_CHANNEL_ID=123456789
+   USER_KEY=your_secure_encryption_key
+   
+   # Optional
+   DISCORD_DRIVE_LOG_CHANNEL_ID=123456789
+   DISCORD_DRIVE_STORAGE_CHANNEL_ID=123456789
+   DISCORD_DRIVE_DATABASE_CHANNEL_ID=123456789
+   DISCORD_DRIVE_UPLOAD_PATH=/custom/upload/path
+   DISCORD_DRIVE_DOWNLOAD_PATH=/custom/download/path
+   DISCORD_DRIVE_LOG_FILE=/custom/log/path/history.json
+   ```
 
 ## Usage
-### 1) Slice files into chunks (recommended for large files)
+
+### Discord Bot Mode
+
+Start the bot:
 ```bash
-python slice_and_assemble.py
+python main.py bot
+# or simply
+python main.py
 ```
-Choose option 1 and point to a folder of files. Chunks + manifest are written
-to the upload folder.
 
-### 2) Start the bot
+#### Bot Commands
+
+- `!upload` — Upload files from the upload folder
+- `!download #DDMMYY-01 [#DDMMYY-02]` — Download archive(s)
+- `!resume [archive_id]` — Resume a failed upload
+- `!status` — Show bot status and stats
+- `!history` — Show recent archives
+- `!archives [query]` — Search archives
+- `!verify <archive_id>` — Verify archive integrity
+- `!help` — Show help message
+
+**Admin Commands:**
+- `!rebuild-log` — Rebuild log from archive channel
+- `!migrate-legacy` — Migrate old logs to new format
+- `!cleanup <archive_id>` — Delete archive and thread
+
+### CLI Slicer Mode
+
+For standalone file slicing/assembly without the bot:
 ```bash
-python bot_server.py
+python main.py slice
 ```
-The bot loads logs, restores from the archive channel if available, and waits
-for commands.
 
-### 3) Discord commands
-- `!upload` — Upload all `.bin` and manifest files in the upload folder.
-- `!download #DDMMYY-01 [#DDMMYY-02]` — Download one archive or a range.
-- `!resume [archive_id]` — Retry missing chunks for the last failed archive or a specific ID.
-- `!status` — Show drive, queue size, encryption status, and last archive info.
-- `!history` — Show the 5 most recent archives.
-- `!archives [query]` — List or search recent archives by ID/filename.
-- `!verify <archive_id>` — Verify that all chunks exist in the archive thread.
-- `!rebuild-log` — Rebuild the local log from archive cards (admin).
-- `!migrate-legacy` — Migrate legacy log entries to archive cards (admin).
-- `!cleanup <archive_id>` — Delete the archive thread + mark archive deleted (admin).
-- `!help` — In-channel help.
+This provides an interactive menu to:
+1. Slice files into encrypted chunks
+2. Reassemble files from chunks
 
-### 4) Reassemble downloads
+## Workflow
+
+### Uploading Files
+
+1. Place files in the upload folder (default: `/Volumes/Local Drive/DiscordDrive/Uploads`)
+2. Run the slicer to encrypt and chunk files:
+   ```bash
+   python main.py slice
+   ```
+3. Upload to Discord:
+   ```
+   !upload
+   ```
+
+### Downloading Files
+
+```
+!download #171226-01
+```
+
+Files are automatically reassembled and decrypted after download.
+
+## Security
+
+- **Encryption**: AES-256-GCM (Galois/Counter Mode)
+- **Key Derivation**: PBKDF2-HMAC-SHA256 with 600,000 iterations
+- **Per-Chunk Encryption**: Each chunk has unique salt and nonce
+- **Compression**: Applied before encryption to reduce storage
+
+### Important Security Notes
+
+⚠️ **Keep your USER_KEY secure!** Without it, files cannot be decrypted.
+
+⚠️ **Backup your manifests!** They contain the file structure information.
+
+## Configuration
+
+All configuration is centralized in `src/config.py`. Environment variables are loaded from `.env`:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DISCORD_BOT_TOKEN` | Yes | Discord bot token |
+| `DISCORD_DRIVE_ARCHIVE_CHANNEL_ID` | Yes | Channel for archive cards |
+| `USER_KEY` | Recommended | Encryption key (files unencrypted if not set) |
+| `DISCORD_DRIVE_LOG_CHANNEL_ID` | No | Channel for log backups |
+| `DISCORD_DRIVE_STORAGE_CHANNEL_ID` | No | Legacy storage channel |
+| `DISCORD_DRIVE_DATABASE_CHANNEL_ID` | No | Database notification channel |
+| `DISCORD_DRIVE_UPLOAD_PATH` | No | Custom upload folder path |
+| `DISCORD_DRIVE_DOWNLOAD_PATH` | No | Custom download folder path |
+
+## Development
+
+### Project Structure
+
+The codebase follows these design principles:
+
+1. **Separation of Concerns**: Core logic is independent of Discord
+2. **Single Responsibility**: Each module has one clear purpose
+3. **Dependency Injection**: Configuration is centralized
+4. **Type Safety**: Data models defined in `common/types.py`
+
+### Running Tests
+
 ```bash
-python slice_and_assemble.py
+# Add tests in future
+pytest tests/
 ```
-Choose option 2 and select the downloaded archive folder, e.g.
-`[Archive] #120225-01` inside the download folder. Files are restored next to
-that folder; the chunks folder is deleted if restoration is clean.
 
-## Why It Works
-- Discord reliably stores attachments and threads, giving you a low-cost,
-  always-available blob store.
-- The manifest preserves ordering, chunk list, and original file sizes, so the
-  assembler can reconstruct files deterministically.
-- AES-GCM ensures confidentiality and integrity per chunk; PBKDF2 protects
-  the user key from trivial brute-force.
-- The local log + archive cards provide a durable index that enables resume,
-  verification, and recovery even after partial failures.
+## Troubleshooting
 
-## Tips & Troubleshooting
-- Keep the log file intact; it maps lot numbers to archive IDs.
-- If the drive path is missing and you use defaults, the bot warns but will still
-  create folders locally—verify paths before uploading.
-- Uploads delete local chunk files after success; keep a backup if needed.
-- Downloads are resumable: re-run `!download` to fill missing pieces.
-- If decryption fails, confirm `USER_KEY` matches the one used to slice.
+### Bot won't start
+- Check `DISCORD_BOT_TOKEN` in `.env`
+- Verify bot has proper permissions in Discord
+- Check `DISCORD_DRIVE_ARCHIVE_CHANNEL_ID` is valid
+
+### Files aren't encrypted
+- Set `USER_KEY` in `.env` file
+- Restart the bot after adding the key
+
+### Upload fails
+- Check available disk space
+- Verify upload folder exists and has files
+- Use `!resume` to continue failed uploads
+
+### Download fails
+- Check archive exists with `!archives`
+- Verify channel permissions
+- Re-run `!download` to resume
+
+## Migration from Old Version
+
+If you have an existing installation:
+
+1. Run `!migrate-legacy` to convert old logs to archive cards
+2. Run `!rebuild-log confirm` to rebuild the log from archive channel
+3. Old files will continue to work with the new system
+
+## License
+
+[Add your license here]
+
+## Contributing
+
+Contributions are welcome! Please follow the existing code structure and patterns.
+
+## Support
+
+For issues or questions, please open a GitHub issue.

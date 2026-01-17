@@ -1,1 +1,2 @@
-cryptography
+cryptography>=41.0.0
+py-cord>=2.4.0
