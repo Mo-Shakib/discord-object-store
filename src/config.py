@@ -1,147 +1,191 @@
-"""Centralized configuration management for Discord Object Store."""
+"""Configuration management for Discord storage bot."""
+
+from __future__ import annotations
 
 import os
+import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
+
+from dotenv import load_dotenv
+
+from .utils import ConfigError, atomic_write
+ENV_TOKEN = "DISCORD_BOT_TOKEN"
+ENV_KEY = "ENCRYPTION_KEY"
+ENV_STORAGE_CHANNEL = "STORAGE_CHANNEL_NAME"
+ENV_ARCHIVE_CHANNEL = "ARCHIVE_CHANNEL_NAME"
+ENV_BATCH_INDEX_CHANNEL = "BATCH_INDEX_CHANNEL_NAME"
+ENV_BACKUP_CHANNEL = "BACKUP_CHANNEL_NAME"
+ENV_CHUNK_SIZE = "MAX_CHUNK_SIZE"
+ENV_UPLOADS = "CONCURRENT_UPLOADS"
+ENV_DOWNLOADS = "CONCURRENT_DOWNLOADS"
+MAX_CHUNK_SIZE_CAP = 9_500_000
 
 
+def _base_dir() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _env_path() -> Path:
+    return _base_dir() / ".env"
+
+
+def validate_token(token: str) -> bool:
+    """
+    Validate Discord bot token format.
+
+    Args:
+        token: Bot token string.
+
+    Returns:
+        True if the token looks valid.
+    """
+    if not token or token.count(".") != 2:
+        return False
+    pattern = re.compile(
+        r"^[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{6,}\.[A-Za-z0-9_\-]{20,}$")
+    return bool(pattern.match(token))
+
+
+def generate_encryption_key() -> str:
+    """
+    Generate a new Fernet encryption key.
+
+    Returns:
+        Base64-encoded Fernet key.
+    """
+    try:
+        from cryptography.fernet import Fernet
+    except ImportError as exc:
+        raise ConfigError(
+            "cryptography is required to generate encryption key.") from exc
+    return Fernet.generate_key().decode("utf-8")
+
+
+def save_config(config: "Config") -> None:
+    """
+    Persist configuration to the .env file.
+
+    Args:
+        config: Config instance to save.
+    """
+    lines = [
+        f"{ENV_TOKEN}={config.discord_bot_token}",
+        f"{ENV_KEY}={config.encryption_key}",
+        f"{ENV_STORAGE_CHANNEL}={config.storage_channel_name}",
+        f"{ENV_ARCHIVE_CHANNEL}={config.archive_channel_name}",
+        f"{ENV_BATCH_INDEX_CHANNEL}={config.batch_index_channel_name}",
+        f"{ENV_BACKUP_CHANNEL}={config.backup_channel_name}",
+        f"{ENV_CHUNK_SIZE}={config.max_chunk_size}",
+        f"{ENV_UPLOADS}={config.concurrent_uploads}",
+        f"{ENV_DOWNLOADS}={config.concurrent_downloads}",
+    ]
+    data = "\n".join(lines) + "\n"
+    env_file = _env_path()
+    atomic_write(env_file, data)
+    os.chmod(env_file, 0o600)
+
+
+@dataclass(frozen=True)
 class Config:
-    """Configuration class for Discord Object Store."""
-    
-    def __init__(self):
-        """Initialize configuration by loading environment variables."""
-        self.BASE_DIR = Path(__file__).resolve().parent.parent
-        
-        # Load .env file if it exists
-        self._load_env_file()
-        
-        # Discord Configuration
-        self.DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-        self.LOG_CHANNEL_ID = self._parse_optional_int("DISCORD_DRIVE_LOG_CHANNEL_ID")
-        self.ARCHIVE_CHANNEL_ID = self._parse_required_int("DISCORD_DRIVE_ARCHIVE_CHANNEL_ID")
-        self.STORAGE_CHANNEL_ID = self._parse_optional_int(
-            "DISCORD_DRIVE_STORAGE_CHANNEL_ID",
-            fallback_env_key="STORAGE_CHANNEL_ID"
-        )
-        self.DATABASE_CHANNEL_ID = self._parse_optional_int(
-            "DISCORD_DRIVE_DATABASE",
-            fallback_env_key="DISCORD_DRIVE_DATABASE_CHANNEL_ID"
-        )
-        
-        # Encryption Configuration
-        self.USER_KEY = os.getenv("USER_KEY")
-        
-        # Path Configuration
-        self.DRIVE_PATH = self._resolve_env_path(
-            "DISCORD_DRIVE_EXTERNAL_DRIVE_PATH",
-            "/Volumes/Local Drive"
-        )
-        self.UPLOAD_FOLDER = self._resolve_env_path(
-            "DISCORD_DRIVE_UPLOAD_PATH",
-            os.path.join(self.DRIVE_PATH, "DiscordDrive", "Uploads")
-        )
-        self.DOWNLOAD_FOLDER = self._resolve_env_path(
-            "DISCORD_DRIVE_DOWNLOAD_PATH",
-            os.path.join(self.DRIVE_PATH, "DiscordDrive", "Downloads")
-        )
-        
-        # Log File Configuration
-        self.DEFAULT_LOG_DIR = os.path.join(self.BASE_DIR, "logs")
-        self.DEFAULT_LOG_FILE = os.path.join(self.DEFAULT_LOG_DIR, "discord-drive-history.json")
-        self.LEGACY_LOG_FILE = os.path.expanduser("~/discord-drive-history.json")
-        self.LOG_FILE = self._resolve_log_file()
-        
-        # Manifest Configuration
-        self.LEGACY_MANIFEST = "manifest.json"
-        
-        # Validate configuration
-        self._validate()
-    
-    def _load_env_file(self):
-        """Load environment variables from .env file."""
-        env_file = self.BASE_DIR / ".env"
-        if not env_file.exists():
-            return
-        
-        with open(env_file, 'r') as f:
-            for raw_line in f:
-                line = raw_line.strip()
-                if not line or line.startswith('#') or '=' not in line:
-                    continue
-                key, value = line.split('=', 1)
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                os.environ.setdefault(key, value)
-    
-    def _resolve_env_path(self, env_key: str, default_value: str) -> str:
-        """Resolve an environment variable path with expansion."""
-        raw_value = os.getenv(env_key)
-        value = raw_value if raw_value else default_value
-        return os.path.abspath(os.path.expanduser(value))
-    
-    def _parse_optional_int(self, env_key: str, fallback_env_key: Optional[str] = None) -> Optional[int]:
-        """Parse an optional integer from environment variable."""
-        raw = os.getenv(env_key)
-        if (raw is None or raw == "") and fallback_env_key:
-            raw = os.getenv(fallback_env_key)
-        if raw is None or raw == "":
-            return None
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return None
-    
-    def _parse_required_int(self, env_key: str) -> int:
-        """Parse a required integer from environment variable."""
-        value = self._parse_optional_int(env_key)
-        if value is None:
-            raise SystemExit(
-                f"❌ {env_key} not set or invalid. Add it to .env or your environment."
-            )
-        return value
-    
-    def _resolve_log_file(self) -> str:
-        """Resolve the log file path."""
-        env_path = os.getenv("DISCORD_DRIVE_LOG_FILE")
-        if env_path:
-            return os.path.abspath(os.path.expanduser(env_path))
-        if os.path.exists(self.LEGACY_LOG_FILE):
-            return self.LEGACY_LOG_FILE
-        return self.DEFAULT_LOG_FILE
-    
-    def _validate(self):
-        """Validate required configuration."""
-        if not self.DISCORD_BOT_TOKEN:
-            raise SystemExit(
-                "❌ DISCORD_BOT_TOKEN not set. Add it to .env or your environment."
-            )
-        
-        if not self.USER_KEY:
-            print("⚠️ WARNING: USER_KEY not set in .env - files will NOT be encrypted!")
-            print("⚠️ Add USER_KEY=your_secure_password to .env file")
-        
-        # Create log directory if needed
-        log_dir = os.path.dirname(self.LOG_FILE)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-        print(f"🧭 Log file path: {os.path.abspath(self.LOG_FILE)}")
-        
-        # Check drive existence only if using default paths
-        using_default_drive_paths = not (
-            os.getenv("DISCORD_DRIVE_UPLOAD_PATH")
-            or os.getenv("DISCORD_DRIVE_DOWNLOAD_PATH")
-        )
-        
-        if using_default_drive_paths and not os.path.exists(self.DRIVE_PATH):
-            print(
-                f"❌ External drive not found at '{self.DRIVE_PATH}'. "
-                "Please check the connection."
-            )
-        else:
-            os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
-            os.makedirs(self.DOWNLOAD_FOLDER, exist_ok=True)
-            print("✅ Upload/Download folders ready.")
+    """Singleton configuration object."""
+
+    discord_bot_token: str
+    encryption_key: str
+    storage_channel_name: str
+    archive_channel_name: str
+    batch_index_channel_name: str
+    backup_channel_name: str
+    max_chunk_size: int
+    concurrent_uploads: int
+    concurrent_downloads: int
+
+    _instance: ClassVar[Optional["Config"]] = None
+
+    @classmethod
+    def get_instance(cls) -> "Config":
+        """
+        Retrieve a singleton instance of Config.
+
+        Returns:
+            Config singleton instance.
+        """
+        if cls._instance is None:
+            cls._instance = load_config()
+        return cls._instance
 
 
-# Global configuration instance
-config = Config()
+def _parse_int(value: str, name: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ConfigError(f"Invalid integer for {name}.") from exc
+    if parsed <= 0:
+        raise ConfigError(f"{name} must be greater than 0.")
+    return parsed
+
+
+def _parse_chunk_size(value: str) -> int:
+    parsed = _parse_int(value, ENV_CHUNK_SIZE)
+    if parsed > MAX_CHUNK_SIZE_CAP:
+        import warnings
+
+        warnings.warn(
+            f"{ENV_CHUNK_SIZE} capped at {MAX_CHUNK_SIZE_CAP} bytes "
+            f"(<10 MB).",
+            RuntimeWarning,
+        )
+        return MAX_CHUNK_SIZE_CAP
+    return parsed
+
+
+def load_config() -> Config:
+    """
+    Load and validate configuration from the .env file.
+
+    Returns:
+        Config instance.
+    """
+    env_file = _env_path()
+    if env_file.exists():
+        load_dotenv(env_file)
+
+    token = os.getenv(ENV_TOKEN, "").strip()
+    encryption_key = os.getenv(ENV_KEY, "").strip()
+    storage_channel = os.getenv(
+        ENV_STORAGE_CHANNEL, "file-storage-vault").strip()
+    archive_channel = os.getenv(ENV_ARCHIVE_CHANNEL, "archive-cards").strip()
+    batch_index_channel = os.getenv(
+        ENV_BATCH_INDEX_CHANNEL, "batch-index").strip()
+    backup_channel = os.getenv(ENV_BACKUP_CHANNEL, "db-backups").strip()
+    max_chunk = os.getenv(ENV_CHUNK_SIZE, str(MAX_CHUNK_SIZE_CAP)).strip()
+    concurrent_uploads = os.getenv(ENV_UPLOADS, "5").strip()
+    concurrent_downloads = os.getenv(ENV_DOWNLOADS, "5").strip()
+
+    if not token:
+        raise ConfigError(
+            "DISCORD_BOT_TOKEN is required. Run setup.py to configure.")
+    if not validate_token(token):
+        raise ConfigError("DISCORD_BOT_TOKEN format is invalid.")
+    generated_key = False
+    if not encryption_key:
+        encryption_key = generate_encryption_key()
+        generated_key = True
+
+    config = Config(
+        discord_bot_token=token,
+        encryption_key=encryption_key,
+        storage_channel_name=storage_channel,
+        archive_channel_name=archive_channel,
+        batch_index_channel_name=batch_index_channel,
+        backup_channel_name=backup_channel,
+        max_chunk_size=_parse_chunk_size(max_chunk),
+        concurrent_uploads=_parse_int(concurrent_uploads, ENV_UPLOADS),
+        concurrent_downloads=_parse_int(concurrent_downloads, ENV_DOWNLOADS),
+    )
+
+    if generated_key or not env_file.exists():
+        save_config(config)
+
+    return config
