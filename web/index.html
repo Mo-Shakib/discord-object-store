@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Object Store UI</title>
+    <title>Discord Object Store - Web Manager</title>
     <meta name="description" content="Manage Discord Object Store batches with a modern web UI.">
-
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -18,24 +20,45 @@
                 extend: {
                     colors: {
                         discord: {
+                            // Concept Palette
                             bg: '#313338',
-                            dark: '#2b2d31',
-                            darker: '#1e1f22',
+                            sidebar: '#2b2d31',
+                            element: '#1e1f22',
+                            hover: '#3f4147',
+                            active: '#35373c',
                             light: '#b5bac1',
                             white: '#f2f3f5',
-                            divider: '#111214',
-                            hover: '#3f4147',
+                            divider: '#1f2023',
+                            brand: '#5865F2',
+                            brandHover: '#4752c4',
+                            green: '#23a559',
+                            red: '#da373c',
+                            yellow: '#f0b232',
+
+                            // Legacy mappings
+                            dark: '#2b2d31',
+                            darker: '#1e1f22',
                             accent: '#ffffff',
                         }
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.2s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
                     }
                 }
             }
         }
     </script>
+
     <style>
         ::-webkit-scrollbar {
             width: 8px;
@@ -49,134 +72,322 @@
         ::-webkit-scrollbar-track {
             background-color: #2b2d31;
         }
+
+        .view-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .view-section.active {
+            display: block;
+            opacity: 1;
+        }
+
+        input[type="text"], input[type="file"] {
+            outline: none;
+            transition: all 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: #5865F2;
+        }
     </style>
 </head>
-<body class="bg-discord-bg text-discord-white font-sans antialiased selection:bg-white selection:text-black">
-    <nav class="sticky top-0 z-50 bg-discord-bg/80 backdrop-blur-md border-b border-discord-divider">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <span class="text-xl font-bold tracking-tight">Discord Object Store</span>
-                <span class="text-xs font-mono text-discord-light bg-discord-dark px-2 py-1 rounded-full">Web UI</span>
-            </div>
-            <div class="flex items-center gap-4 text-sm text-discord-light">
-                <a href="#dashboard" class="hover:text-white">Dashboard</a>
-                <a href="#upload" class="hover:text-white">Upload</a>
-                <a href="#batches" class="hover:text-white">Batches</a>
-                <a href="#actions" class="hover:text-white">Actions</a>
-                <a href="#jobs" class="hover:text-white">Jobs</a>
+<body class="bg-discord-bg text-discord-white font-sans h-screen flex overflow-hidden selection:bg-discord-brand selection:text-white">
+
+    <aside class="w-72 bg-discord-sidebar flex flex-col border-r border-discord-divider shrink-0 z-30">
+        <div class="h-16 flex items-center px-5 border-b border-discord-divider shrink-0">
+            <i class="fa-brands fa-discord text-3xl text-discord-brand mr-3"></i>
+            <div>
+                <h1 class="font-extrabold text-base tracking-tight leading-tight">OBJECT STORE</h1>
+                <div class="text-[10px] text-discord-light font-mono bg-discord-element px-1.5 rounded inline-block mt-0.5">WEB UI</div>
             </div>
         </div>
-    </nav>
 
-    <main class="max-w-6xl mx-auto px-4 py-10 space-y-12">
-        <section id="dashboard" class="space-y-6">
-            <div class="flex items-center justify-between">
-                <h1 class="text-3xl font-bold">Dashboard</h1>
-                <button id="refresh-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Refresh</button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
-                    <div class="text-discord-light text-xs uppercase">Batches</div>
-                    <div id="stat-batches" class="text-2xl font-semibold">--</div>
-                </div>
-                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
-                    <div class="text-discord-light text-xs uppercase">Total Size</div>
-                    <div id="stat-total" class="text-2xl font-semibold">--</div>
-                </div>
-                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
-                    <div class="text-discord-light text-xs uppercase">Compressed</div>
-                    <div id="stat-compressed" class="text-2xl font-semibold">--</div>
-                </div>
-                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
-                    <div class="text-discord-light text-xs uppercase">Chunks</div>
-                    <div id="stat-chunks" class="text-2xl font-semibold">--</div>
-                </div>
-            </div>
-        </section>
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center px-3 py-2 text-discord-white bg-discord-hover rounded-[30px] transition-all group active">
+                <i class="fa-solid fa-chart-pie w-6 text-center group-hover:text-discord-brand transition-colors"></i>
+                <span class="font-medium text-sm ml-2">Dashboard</span>
+            </button>
 
-        <section id="upload" class="space-y-6">
-            <h2 class="text-2xl font-bold">Upload</h2>
-            <div class="bg-discord-dark border border-discord-divider rounded-2xl p-6">
-                <form id="upload-form" class="space-y-4">
-                    <div class="space-y-2">
-                        <label class="text-sm text-discord-light">File or Folder</label>
-                        <div class="flex items-center gap-3 text-sm text-discord-light">
-                            <label class="inline-flex items-center gap-2">
-                                <input id="upload-folder-toggle" type="checkbox" class="rounded border-discord-divider bg-discord-darker">
-                                Upload folder
-                            </label>
-                            <span class="text-xs text-discord-light">Tip: folder upload uses relative paths.</span>
-                        </div>
-                        <input id="upload-file" type="file" class="mt-2 block w-full text-sm text-discord-light bg-discord-darker border border-discord-divider rounded-lg p-2">
+            <button onclick="switchView('upload')" id="nav-upload" class="nav-item w-full flex items-center px-3 py-2 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-[30px] transition-all group">
+                <i class="fa-solid fa-cloud-arrow-up w-6 text-center group-hover:text-discord-brand transition-colors"></i>
+                <span class="font-medium text-sm ml-2">Upload</span>
+            </button>
+
+            <button onclick="switchView('batches')" id="nav-batches" class="nav-item w-full flex items-center px-3 py-2 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-[30px] transition-all group">
+                <i class="fa-solid fa-layer-group w-6 text-center group-hover:text-discord-brand transition-colors"></i>
+                <span class="font-medium text-sm ml-2">All Batches</span>
+            </button>
+
+            <button onclick="switchView('actions')" id="nav-actions" class="nav-item w-full flex items-center px-3 py-2 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-[30px] transition-all group">
+                <i class="fa-solid fa-sliders w-6 text-center group-hover:text-discord-brand transition-colors"></i>
+                <span class="font-medium text-sm ml-2">Actions</span>
+            </button>
+        </nav>
+
+        <div class="p-4 bg-discord-element/50 border-t border-discord-divider shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <div class="w-9 h-9 rounded-full bg-discord-brand flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                        <i class="fa-solid fa-link"></i>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="text-sm text-discord-light">Title</label>
-                            <input id="upload-title" type="text" class="mt-2 block w-full text-sm bg-discord-darker border border-discord-divider rounded-lg p-2 text-discord-white" placeholder="Optional title">
-                        </div>
-                        <div>
-                            <label class="text-sm text-discord-light">Tags</label>
-                            <input id="upload-tags" type="text" class="mt-2 block w-full text-sm bg-discord-darker border border-discord-divider rounded-lg p-2 text-discord-white" placeholder="tag1, tag2">
-                        </div>
-                        <div>
-                            <label class="text-sm text-discord-light">Description</label>
-                            <input id="upload-description" type="text" class="mt-2 block w-full text-sm bg-discord-darker border border-discord-divider rounded-lg p-2 text-discord-white" placeholder="Short summary">
-                        </div>
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-discord-element rounded-full flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <label class="inline-flex items-center gap-2 text-sm text-discord-light">
-                            <input id="upload-confirm" type="checkbox" class="rounded border-discord-divider bg-discord-darker">
-                            Require confirm (CLI style)
-                        </label>
-                        <button type="submit" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Start upload</button>
-                    </div>
-                </form>
-            </div>
-        </section>
-
-        <section id="batches" class="space-y-6">
-            <h2 class="text-2xl font-bold">Batches</h2>
-            <div class="bg-discord-dark border border-discord-divider rounded-2xl p-6">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="text-discord-light">
-                            <tr class="text-left border-b border-discord-divider">
-                                <th class="py-2">Batch ID</th>
-                                <th class="py-2">Name</th>
-                                <th class="py-2">Size</th>
-                                <th class="py-2">Status</th>
-                                <th class="py-2 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="batch-table"></tbody>
-                    </table>
+                </div>
+                <div class="flex-1 overflow-hidden">
+                    <div class="text-sm font-bold text-white truncate">Connected</div>
+                    <div class="text-xs text-discord-light font-mono truncate">API Ready</div>
                 </div>
             </div>
-        </section>
+        </div>
+    </aside>
 
-        <section id="actions" class="space-y-4">
-            <h2 class="text-2xl font-bold">Sync & Backup</h2>
-            <div class="flex flex-wrap gap-4">
-                <button id="sync-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Sync from Discord</button>
-                <button id="sync-reset-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Sync (Reset)</button>
-                <button id="backup-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Backup DB</button>
-                <button id="backup-upload-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Backup + Upload</button>
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-discord-bg">
+        <header class="h-16 bg-discord-bg border-b border-discord-divider flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
+            <div class="flex items-center gap-4">
+                <nav class="flex items-center text-sm font-medium text-discord-light">
+                    <span class="hover:text-white cursor-pointer transition-colors"><i class="fa-solid fa-house mr-2"></i>root</span>
+                    <span class="mx-2 text-discord-light/30">/</span>
+                    <span id="breadcrumb-current" class="text-white">dashboard</span>
+                </nav>
             </div>
-        </section>
+            
+            <div class="flex items-center gap-4">
+                <button id="refresh-btn" class="flex items-center gap-2 px-4 py-2 bg-discord-brand hover:bg-discord-brandHover text-white text-xs font-bold rounded-[30px] transition-colors shadow-sm">
+                    <i class="fa-solid fa-rotate"></i> Refresh
+                </button>
+            </div>
+        </header>
 
-        <section id="jobs" class="space-y-4">
-            <h2 class="text-2xl font-bold">Job Status</h2>
-            <div class="bg-discord-dark border border-discord-divider rounded-2xl p-6 space-y-3">
-                <div id="job-summary" class="text-discord-light text-sm">No active job.</div>
-                <div class="h-2 rounded-full bg-discord-darker overflow-hidden">
-                    <div id="job-progress" class="h-full bg-white transition-all" style="width: 0%;"></div>
+        <div class="flex-1 overflow-y-auto p-6 scroll-smooth relative" id="main-container">
+            
+            <section id="dashboard" class="view-section active animate-fade-in space-y-6">
+                <div class="relative w-full max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light"></i>
+                    <input type="text" placeholder="Search dashboard..." class="w-full bg-discord-sidebar border border-discord-divider rounded-[30px] py-3 pl-12 pr-4 text-white text-sm focus:border-discord-brand transition-colors placeholder-discord-light/50">
                 </div>
-                <pre id="job-logs" class="text-xs bg-discord-darker rounded-lg p-3 overflow-x-auto text-discord-light min-h-[120px]"></pre>
-            </div>
-        </section>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Total Batches</h3>
+                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-purple-400">
+                                <i class="fa-solid fa-layer-group"></i>
+                            </div>
+                        </div>
+                        <div id="stat-batches" class="text-2xl font-bold text-white">--</div>
+                    </div>
+
+                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Total Size</h3>
+                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-green-400">
+                                <i class="fa-solid fa-hard-drive"></i>
+                            </div>
+                        </div>
+                        <div id="stat-total" class="text-2xl font-bold text-white">--</div>
+                    </div>
+
+                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Compressed</h3>
+                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-blue-400">
+                                <i class="fa-regular fa-file-zipper"></i>
+                            </div>
+                        </div>
+                        <div id="stat-compressed" class="text-2xl font-bold text-white">--</div>
+                    </div>
+
+                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Total Chunks</h3>
+                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-yellow-500">
+                                <i class="fa-solid fa-puzzle-piece"></i>
+                            </div>
+                        </div>
+                        <div id="stat-chunks" class="text-2xl font-bold text-white">--</div>
+                    </div>
+                </div>
+
+                <div class="bg-[#1e1f22] rounded-[30px] border border-discord-divider flex flex-col shadow-2xl overflow-hidden font-mono text-sm min-h-[300px]">
+                    <div class="bg-[#2b2d31] px-6 py-3 border-b border-discord-divider flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="flex gap-1.5">
+                                <div class="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
+                                <div class="w-3 h-3 rounded-full bg-[#febc2e]"></div>
+                                <div class="w-3 h-3 rounded-full bg-[#28c840]"></div>
+                            </div>
+                            <span class="ml-3 text-xs text-discord-light opacity-70">runner — active job</span>
+                        </div>
+                        <div id="job-summary" class="text-xs text-discord-light font-bold uppercase">No active job</div>
+                    </div>
+
+                    <div class="h-1 bg-discord-bg w-full">
+                        <div id="job-progress" class="h-full bg-discord-brand transition-all duration-300 ease-out" style="width: 0%;"></div>
+                    </div>
+                    
+                    <pre id="job-logs" class="flex-1 p-6 overflow-y-auto text-discord-light/90 whitespace-pre-wrap bg-[#1e1f22] scrollbar-thin"></pre>
+                </div>
+            </section>
+
+            <section id="upload" class="view-section animate-fade-in space-y-6">
+                <div class="bg-discord-sidebar rounded-[30px] border border-discord-divider overflow-hidden">
+                    <div class="px-6 py-4 border-b border-discord-divider bg-discord-element/50">
+                        <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-cloud-arrow-up mr-2 text-discord-brand"></i>Upload New Artifact</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <form id="upload-form" class="space-y-6 max-w-2xl">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-discord-light uppercase tracking-wide">File Selection</label>
+                                <div class="bg-discord-element border border-discord-divider rounded-[30px] p-4 transition-colors hover:border-discord-light/30">
+                                    <input id="upload-file" type="file" class="block w-full text-sm text-discord-light file:mr-4 file:py-2 file:px-4 file:rounded-[30px] file:border-0 file:text-xs file:font-semibold file:bg-discord-brand file:text-white hover:file:bg-discord-brandHover cursor-pointer">
+                                </div>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <input id="upload-folder-toggle" type="checkbox" class="rounded border-discord-divider bg-discord-element text-discord-brand focus:ring-0">
+                                    <label for="upload-folder-toggle" class="text-sm text-discord-light cursor-pointer select-none">Upload as folder (preserves relative paths)</label>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Title</label>
+                                    <input id="upload-title" type="text" class="w-full bg-discord-element border border-discord-divider rounded-[30px] p-3 px-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="e.g. Project Phoenix Assets">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Tags</label>
+                                    <input id="upload-tags" type="text" class="w-full bg-discord-element border border-discord-divider rounded-[30px] p-3 px-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="backup, v1, release">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Description</label>
+                                <input id="upload-description" type="text" class="w-full bg-discord-element border border-discord-divider rounded-[30px] p-3 px-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="Brief summary of contents...">
+                            </div>
+
+                            <div class="pt-4 border-t border-discord-divider flex items-center justify-between">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input id="upload-confirm" type="checkbox" class="rounded border-discord-divider bg-discord-element text-discord-brand focus:ring-0">
+                                    <span class="text-sm text-discord-light">Require CLI Confirmation</span>
+                                </label>
+                                <button type="submit" class="bg-discord-brand hover:bg-discord-brandHover text-white px-8 py-3 rounded-[30px] font-bold shadow-lg transition-all transform active:scale-95 text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-play"></i> Start Upload
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section id="batches" class="view-section animate-fade-in space-y-6">
+                 <div class="relative w-full max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light"></i>
+                    <input type="text" placeholder="Search batches..." class="w-full bg-discord-sidebar border border-discord-divider rounded-[30px] py-3 pl-12 pr-4 text-white text-sm focus:border-discord-brand transition-colors placeholder-discord-light/50">
+                </div>
+
+                <div class="bg-discord-sidebar border border-discord-divider rounded-[30px] overflow-hidden shadow-sm">
+                    <div class="px-6 py-4 border-b border-discord-divider bg-discord-element/50 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-white">All Batches</h2>
+                        <div class="text-xs text-discord-light font-mono">/mnt/data/batches</div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-discord-element text-xs text-discord-light uppercase font-mono">
+                                <tr class="text-left">
+                                    <th class="px-6 py-3 font-medium">Batch ID</th>
+                                    <th class="px-6 py-3 font-medium">Name</th>
+                                    <th class="px-6 py-3 font-medium">Size</th>
+                                    <th class="px-6 py-3 font-medium">Status</th>
+                                    <th class="px-6 py-3 font-medium text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batch-table" class="divide-y divide-discord-divider bg-discord-sidebar"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="actions" class="view-section animate-fade-in space-y-6">
+                <h2 class="text-lg font-bold text-white mb-4">Sync & Maintenance</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
+                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-white mb-3">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </div>
+                        <h3 class="font-bold text-white mb-1">Sync from Discord</h3>
+                        <p class="text-xs text-discord-light mb-4">Fetch latest metadata from channels.</p>
+                        <button id="sync-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Run Sync</button>
+                    </div>
+
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
+                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-yellow-500 mb-3">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </div>
+                        <h3 class="font-bold text-white mb-1">Hard Reset Sync</h3>
+                        <p class="text-xs text-discord-light mb-4">Rebuild local DB from scratch.</p>
+                        <button id="sync-reset-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Run Reset</button>
+                    </div>
+
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
+                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-green-400 mb-3">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                        </div>
+                        <h3 class="font-bold text-white mb-1">Local Backup</h3>
+                        <p class="text-xs text-discord-light mb-4">Dump local DB to a JSON file.</p>
+                        <button id="backup-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Backup DB</button>
+                    </div>
+
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
+                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-discord-brand mb-3">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <h3 class="font-bold text-white mb-1">Cloud Backup</h3>
+                        <p class="text-xs text-discord-light mb-4">Backup DB and upload to Discord.</p>
+                        <button id="backup-upload-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Backup + Upload</button>
+                    </div>
+                </div>
+            </section>
+        </div>
     </main>
 
     <script>
+        function switchView(viewName) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-discord-hover', 'text-discord-white', 'active');
+                el.classList.add('text-discord-light');
+            });
+            
+            const activeNav = document.getElementById(`nav-${viewName}`);
+            if (activeNav) {
+                activeNav.classList.add('bg-discord-hover', 'text-discord-white', 'active');
+                activeNav.classList.remove('text-discord-light');
+            }
+
+            let displayName = viewName;
+            if (viewName === 'batches') displayName = 'All Batches';
+            document.getElementById('breadcrumb-current').textContent = displayName;
+
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active');
+                setTimeout(() => {
+                    if (!el.classList.contains('active')) el.style.display = 'none';
+                }, 200);
+            });
+
+            const target = document.getElementById(viewName);
+            if (target) {
+                target.style.display = 'block';
+                void target.offsetWidth;
+                target.classList.add('active');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            switchView('dashboard');
+        });
+
         const jobSummary = document.getElementById('job-summary');
         const jobLogs = document.getElementById('job-logs');
         const jobProgress = document.getElementById('job-progress');
@@ -200,6 +411,7 @@
             jobSummary.textContent = `Job ${jobId} running...`;
             jobLogs.textContent = '';
             jobProgress.style.width = '0%';
+            switchView('dashboard');
             if (jobTimer) clearInterval(jobTimer);
             jobTimer = setInterval(refreshJob, 2000);
             refreshJob();
@@ -228,6 +440,7 @@
             }
             jobLogs.textContent = logs.join('\n');
             jobProgress.style.width = `${data.progress || 0}%`;
+            jobLogs.scrollTop = jobLogs.scrollHeight;
             if (data.status === 'complete' || data.status === 'failed') {
                 clearInterval(jobTimer);
             }
@@ -249,16 +462,16 @@
             table.innerHTML = '';
             batches.forEach((batch) => {
                 const row = document.createElement('tr');
-                row.className = 'border-b border-discord-divider';
+                row.className = 'border-b border-discord-divider hover:bg-discord-hover/50 transition-colors';
                 row.innerHTML = `
-                    <td class="py-3 font-mono text-xs">${batch.batch_id}</td>
-                    <td class="py-3">${batch.original_name}</td>
-                    <td class="py-3">${formatBytes(batch.total_size)}</td>
-                    <td class="py-3">${batch.status}</td>
-                    <td class="py-3 text-right space-x-2">
-                        <button class="bg-white text-black px-3 py-1 rounded-full text-xs font-bold" data-action="download" data-id="${batch.batch_id}">Download</button>
-                        <button class="bg-white text-black px-3 py-1 rounded-full text-xs font-bold" data-action="verify" data-id="${batch.batch_id}">Verify</button>
-                        <button class="bg-white text-black px-3 py-1 rounded-full text-xs font-bold" data-action="delete" data-id="${batch.batch_id}">Delete</button>
+                    <td class="px-6 py-4 font-mono text-xs text-discord-light">${batch.batch_id}</td>
+                    <td class="px-6 py-4 font-bold text-white">${batch.original_name}</td>
+                    <td class="px-6 py-4 text-discord-light">${formatBytes(batch.total_size)}</td>
+                    <td class="px-6 py-4"><span class="bg-discord-element px-2 py-1 rounded-[30px] text-xs border border-discord-divider">${batch.status}</span></td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button class="bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light border border-discord-divider px-3 py-1.5 rounded-[30px] transition-all text-xs font-bold shadow-sm" data-action="download" data-id="${batch.batch_id}"><i class="fa-solid fa-download"></i></button>
+                        <button class="bg-discord-element hover:bg-green-500 hover:text-white text-discord-light border border-discord-divider px-3 py-1.5 rounded-[30px] transition-all text-xs font-bold shadow-sm" data-action="verify" data-id="${batch.batch_id}"><i class="fa-solid fa-check"></i></button>
+                        <button class="bg-discord-element hover:bg-red-500 hover:text-white text-discord-light border border-discord-divider px-3 py-1.5 rounded-[30px] transition-all text-xs font-bold shadow-sm" data-action="delete" data-id="${batch.batch_id}"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
                 table.appendChild(row);
@@ -266,8 +479,11 @@
         };
 
         document.getElementById('refresh-btn').addEventListener('click', async () => {
+            const icon = document.querySelector('#refresh-btn i');
+            if (icon) icon.classList.add('fa-spin');
             await loadStats();
             await loadBatches();
+            setTimeout(() => icon && icon.classList.remove('fa-spin'), 500);
         });
 
         const uploadToggle = document.getElementById('upload-folder-toggle');
