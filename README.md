@@ -94,6 +94,16 @@ python bot.py backup                     # Backup DB (optional upload to Discord
 python bot.py sync --reset               # Rebuild DB from Discord
 ```
 
+## 🖥️ Web UI
+
+Launch a lightweight local dashboard to inspect batches and storage stats:
+
+```bash
+python web_app.py --port 8080
+```
+
+Then open <http://localhost:8080> to view the dashboard. The UI reads from the same local SQLite database used by the CLI.
+
 ## 🔁 Workflow
 
 ### ⬆️ Upload (Create a Batch)

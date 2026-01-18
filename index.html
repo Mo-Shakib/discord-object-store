@@ -145,6 +145,7 @@
                         <a href="#how-it-works" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">How it Works</a>
                         <a href="#setup" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">Setup</a>
                         <a href="#commands" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">Commands</a>
+                        <a href="#dashboard" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">Dashboard</a>
                         <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-full text-sm font-bold transition-all transform hover:scale-105">
                             <i class="fa-brands fa-github mr-2"></i>GitHub
                         </a>
@@ -167,6 +168,7 @@
                 <a href="#how-it-works" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">How it Works</a>
                 <a href="#setup" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">Setup</a>
                 <a href="#commands" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">Commands</a>
+                <a href="#dashboard" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
                 <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="text-white bg-discord-darker block px-3 py-2 rounded-md text-base font-bold mt-4 border border-discord-divider">
                     <i class="fa-brands fa-github mr-2"></i> View on GitHub
                 </a>
@@ -302,6 +304,60 @@
                     </div>
                     <h3 class="text-xl font-bold mb-2">Friendly CLI</h3>
                     <p class="text-discord-light text-sm leading-relaxed">Simple CLI for uploads, downloads, listing, info, and stats—built for non-technical users.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="py-24 bg-discord-dark border-t border-discord-divider">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12 reveal">
+                <h2 class="text-3xl font-bold text-white mb-4">Local Dashboard</h2>
+                <p class="text-discord-light max-w-3xl mx-auto">Inspect your local metadata database with batch stats and the most recent uploads. Run <code>python web_app.py</code> to enable live data.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div class="bg-discord-bg border border-discord-divider rounded-xl p-6 reveal">
+                    <p class="text-discord-light text-sm">Batches</p>
+                    <p class="text-2xl font-bold text-white mt-2" id="stat-batches">0</p>
+                </div>
+                <div class="bg-discord-bg border border-discord-divider rounded-xl p-6 reveal">
+                    <p class="text-discord-light text-sm">Total Size</p>
+                    <p class="text-2xl font-bold text-white mt-2" id="stat-total-size">0 B</p>
+                </div>
+                <div class="bg-discord-bg border border-discord-divider rounded-xl p-6 reveal">
+                    <p class="text-discord-light text-sm">Compressed Size</p>
+                    <p class="text-2xl font-bold text-white mt-2" id="stat-compressed-size">0 B</p>
+                </div>
+                <div class="bg-discord-bg border border-discord-divider rounded-xl p-6 reveal">
+                    <p class="text-discord-light text-sm">Compression Ratio</p>
+                    <p class="text-2xl font-bold text-white mt-2" id="stat-compression-ratio">—</p>
+                </div>
+            </div>
+
+            <div class="bg-discord-bg border border-discord-divider rounded-xl overflow-hidden reveal">
+                <div class="px-4 py-3 bg-discord-darker border-b border-discord-divider text-discord-light text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <span>Recent batches from your local database.</span>
+                    <span class="text-xs text-discord-light/70" id="dashboard-status">Waiting for data...</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left">
+                        <thead class="bg-discord-dark border-b border-discord-divider text-discord-light text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="p-4 font-semibold">Batch</th>
+                                <th class="p-4 font-semibold">Files</th>
+                                <th class="p-4 font-semibold">Chunks</th>
+                                <th class="p-4 font-semibold">Upload Date</th>
+                                <th class="p-4 font-semibold">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-discord-divider text-discord-light" id="dashboard-batches">
+                            <tr>
+                                <td class="p-4" colspan="5">No batches loaded yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -604,6 +660,69 @@ pip install -r requirements.txt</code></pre>
             });
         }
 
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const index = Math.floor(Math.log(bytes) / Math.log(1024));
+            const value = bytes / Math.pow(1024, index);
+            return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[index]}`;
+        }
+
+        async function loadDashboard() {
+            const statusEl = document.getElementById('dashboard-status');
+            if (!statusEl) return;
+
+            statusEl.textContent = 'Loading...';
+
+            try {
+                const [statsResponse, batchesResponse] = await Promise.all([
+                    fetch('/api/stats'),
+                    fetch('/api/batches'),
+                ]);
+
+                if (!statsResponse.ok || !batchesResponse.ok) {
+                    throw new Error('Failed to fetch dashboard data.');
+                }
+
+                const stats = await statsResponse.json();
+                const batchesPayload = await batchesResponse.json();
+                const batches = batchesPayload.batches || [];
+
+                document.getElementById('stat-batches').textContent = stats.batch_count ?? 0;
+                document.getElementById('stat-total-size').textContent = formatBytes(stats.total_size ?? 0);
+                document.getElementById('stat-compressed-size').textContent = formatBytes(stats.compressed_size ?? 0);
+                document.getElementById('stat-compression-ratio').textContent = stats.compression_ratio ?? '—';
+
+                const tbody = document.getElementById('dashboard-batches');
+                tbody.innerHTML = '';
+
+                if (batches.length === 0) {
+                    tbody.innerHTML = '<tr><td class=\"p-4\" colspan=\"5\">No batches yet. Upload a batch to populate the dashboard.</td></tr>';
+                } else {
+                    batches.slice(0, 10).forEach(batch => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-discord-dark/60 transition-colors';
+                        row.innerHTML = `
+                            <td class=\"p-4 text-white font-mono text-xs sm:text-sm break-all\">${batch.batch_id}</td>
+                            <td class=\"p-4\">${batch.file_count}</td>
+                            <td class=\"p-4\">${batch.chunk_count}</td>
+                            <td class=\"p-4\">${batch.upload_date ?? '—'}</td>
+                            <td class=\"p-4\">
+                                <span class=\"inline-flex items-center px-2 py-1 rounded-full bg-discord-darker border border-discord-divider text-xs text-discord-light\">
+                                    ${batch.status ?? 'unknown'}
+                                </span>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                statusEl.textContent = 'Live data loaded.';
+            } catch (error) {
+                statusEl.textContent = 'Unable to load data. Is the web UI running?';
+            }
+        }
+
         // Intersection Observer for scroll animations
         document.addEventListener('DOMContentLoaded', () => {
             const observerOptions = {
@@ -623,6 +742,8 @@ pip install -r requirements.txt</code></pre>
 
             const elements = document.querySelectorAll('.reveal');
             elements.forEach(el => observer.observe(el));
+
+            loadDashboard();
         });
 
         // Navbar Scroll Effect
