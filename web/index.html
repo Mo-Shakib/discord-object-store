@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Object Store - Web Manager</title>
+    <title>DisBucket - Web UI</title>
     <meta name="description" content="Manage Discord Object Store batches with a modern web UI.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,11 +128,11 @@
     <aside class="w-72 bg-discord-sidebar flex flex-col border-r border-discord-divider shrink-0 z-30 shadow-xl">
         <div class="h-20 flex items-center px-6 border-b border-discord-divider shrink-0 gap-3">
             <div class="w-10 h-10 rounded-xl bg-discord-brand flex items-center justify-center shadow-glow">
-                <i class="fa-brands fa-discord text-2xl text-white"></i>
+                <i class="fa-solid fa-cubes text-2xl text-white"></i>
             </div>
             <div>
-                <h1 class="font-extrabold text-lg tracking-tight leading-none text-white">Object Store</h1>
-                <span class="text-[10px] font-mono text-discord-brand uppercase tracking-wider font-bold">Manager v4.0.0</span>
+                <h1 class="font-extrabold text-lg tracking-tight leading-none text-white">DisBucket - Web UI</h1>
+                <span class="text-[10px] font-mono text-discord-brand uppercase tracking-wider font-bold">Version v4.0.0</span>
             </div>
         </div>
 
@@ -174,8 +174,8 @@
                     </div>
                 </div>
                 <div class="flex-1 overflow-hidden">
-                    <div class="text-sm font-bold text-white truncate">Store Online</div>
-                    <div class="text-[11px] text-discord-light font-mono truncate">Gateway: <span class="text-green-400">Connected</span></div>
+                    <div class="text-sm font-bold text-white truncate">DisBucket Server</div>
+                    <div class="text-[11px] text-discord-light font-mono truncate">Web UI: <span class="text-green-400">Connected</span></div>
                 </div>
             </div>
         </div>
@@ -471,6 +471,7 @@
                                     <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider w-32">ID</th>
                                     <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Artifact Name</th>
                                     <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Size</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Date</th>
                                     <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider text-right">Actions</th>
                                 </tr>
@@ -749,6 +750,19 @@
             });
         };
 
+        const formatDate = (value) => {
+            if (!value) return '--';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return '--';
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            return parsed.toLocaleDateString(undefined, {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric',
+                timeZone,
+            });
+        };
+
         const renderBatches = () => {
             const table = document.getElementById('batch-table');
             const emptyState = document.getElementById('empty-state');
@@ -783,6 +797,7 @@
                         ${batch.original_name}
                     </td>
                     <td class="px-6 py-4 text-discord-light font-mono text-xs">${formatBytes(batch.total_size)}</td>
+                    <td class="px-6 py-4 text-discord-light font-mono text-xs">${formatDate(batch.upload_date)}</td>
                     <td class="px-6 py-4">${statusBadge}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
