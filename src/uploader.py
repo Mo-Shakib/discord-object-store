@@ -75,6 +75,21 @@ def prompt_optional_metadata() -> Dict[str, str]:
     }
 
 
+def _normalize_metadata(metadata: Optional[Dict[str, str]]) -> Dict[str, str]:
+    if not metadata:
+        return {"title": "", "tags": "", "description": ""}
+    title = (metadata.get("title") or "").strip()
+    tags_input = (metadata.get("tags") or "").strip()
+    description = (metadata.get("description") or "").strip()
+    tags = ", ".join([tag.strip()
+                     for tag in tags_input.split(",") if tag.strip()])
+    return {
+        "title": title,
+        "tags": tags,
+        "description": description,
+    }
+
+
 def cleanup_temp_files(temp_dir: Path) -> None:
     """
     Remove temporary directory.
@@ -87,7 +102,11 @@ def cleanup_temp_files(temp_dir: Path) -> None:
 
 
 async def _prepare_chunks(
-    source_path: Path, batch_id: str, key: str, confirm: bool
+    source_path: Path,
+    batch_id: str,
+    key: str,
+    confirm: bool,
+    metadata: Optional[Dict[str, str]],
 ) -> Dict[str, object]:
     if not source_path.exists():
         raise StorageBotError(f"Path not found: {source_path}")
@@ -103,7 +122,9 @@ async def _prepare_chunks(
         "file_count": file_count,
     }
     show_upload_summary(summary)
-    meta_inputs = prompt_optional_metadata()
+    meta_inputs = _normalize_metadata(metadata)
+    if not metadata:
+        meta_inputs = prompt_optional_metadata()
     if confirm:
         proceed = input("Continue with upload? [y/N]: ").strip().lower() == "y"
         if not proceed:
@@ -140,7 +161,9 @@ async def _prepare_chunks(
     }
 
 
-async def upload(path: str, confirm: bool = True) -> str:
+async def upload(
+    path: str, confirm: bool = True, metadata: Optional[Dict[str, str]] = None
+) -> str:
     """
     Upload a file or folder to Discord storage.
 
@@ -160,7 +183,7 @@ async def upload(path: str, confirm: bool = True) -> str:
     sleep_inhibitor = SleepInhibitor()
     sleep_inhibitor.start()
     try:
-        prepared = await _prepare_chunks(source_path, batch_id, key, confirm)
+        prepared = await _prepare_chunks(source_path, batch_id, key, confirm, metadata)
         chunk_paths = prepared["chunk_paths"]
         chunk_hashes = prepared["chunk_hashes"]
         temp_dir = prepared["temp_dir"]

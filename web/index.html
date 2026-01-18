@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Object Store UI</title>
+    <meta name="description" content="Manage Discord Object Store batches with a modern web UI.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            bg: '#313338',
+                            dark: '#2b2d31',
+                            darker: '#1e1f22',
+                            light: '#b5bac1',
+                            white: '#f2f3f5',
+                            divider: '#111214',
+                            hover: '#3f4147',
+                            accent: '#ffffff',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+            background-color: #2b2d31;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #1a1b1e;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background-color: #2b2d31;
+        }
+    </style>
+</head>
+<body class="bg-discord-bg text-discord-white font-sans antialiased selection:bg-white selection:text-black">
+    <nav class="sticky top-0 z-50 bg-discord-bg/80 backdrop-blur-md border-b border-discord-divider">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-xl font-bold tracking-tight">Discord Object Store</span>
+                <span class="text-xs font-mono text-discord-light bg-discord-dark px-2 py-1 rounded-full">Web UI</span>
+            </div>
+            <div class="flex items-center gap-4 text-sm text-discord-light">
+                <a href="#dashboard" class="hover:text-white">Dashboard</a>
+                <a href="#upload" class="hover:text-white">Upload</a>
+                <a href="#batches" class="hover:text-white">Batches</a>
+                <a href="#actions" class="hover:text-white">Actions</a>
+                <a href="#jobs" class="hover:text-white">Jobs</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-10 space-y-12">
+        <section id="dashboard" class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-3xl font-bold">Dashboard</h1>
+                <button id="refresh-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Refresh</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
+                    <div class="text-discord-light text-xs uppercase">Batches</div>
+                    <div id="stat-batches" class="text-2xl font-semibold">--</div>
+                </div>
+                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
+                    <div class="text-discord-light text-xs uppercase">Total Size</div>
+                    <div id="stat-total" class="text-2xl font-semibold">--</div>
+                </div>
+                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
+                    <div class="text-discord-light text-xs uppercase">Compressed</div>
+                    <div id="stat-compressed" class="text-2xl font-semibold">--</div>
+                </div>
+                <div class="bg-discord-dark border border-discord-divider rounded-xl p-4">
+                    <div class="text-discord-light text-xs uppercase">Chunks</div>
+                    <div id="stat-chunks" class="text-2xl font-semibold">--</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="upload" class="space-y-6">
+            <h2 class="text-2xl font-bold">Upload</h2>
+            <div class="bg-discord-dark border border-discord-divider rounded-2xl p-6">
+                <form id="upload-form" class="space-y-4">
+                    <div class="space-y-2">
+                        <label class="text-sm text-discord-light">File or Folder</label>
+                        <div class="flex items-center gap-3 text-sm text-discord-light">
+                            <label class="inline-flex items-center gap-2">
+                                <input id="upload-folder-toggle" type="checkbox" class="rounded border-discord-divider bg-discord-darker">
+                                Upload folder
+                            </label>
+                            <span class="text-xs text-discord-light">Tip: folder upload uses relative paths.</span>
+                        </div>
+                        <input id="upload-file" type="file" class="mt-2 block w-full text-sm text-discord-light bg-discord-darker border border-discord-divider rounded-lg p-2">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="text-sm text-discord-light">Title</label>
+                            <input id="upload-title" type="text" class="mt-2 block w-full text-sm bg-discord-darker border border-discord-divider rounded-lg p-2 text-discord-white" placeholder="Optional title">
+                        </div>
+                        <div>
+                            <label class="text-sm text-discord-light">Tags</label>
+                            <input id="upload-tags" type="text" class="mt-2 block w-full text-sm bg-discord-darker border border-discord-divider rounded-lg p-2 text-discord-white" placeholder="tag1, tag2">
+                        </div>
+                        <div>
+                            <label class="text-sm text-discord-light">Description</label>
+                            <input id="upload-description" type="text" class="mt-2 block w-full text-sm bg-discord-darker border border-discord-divider rounded-lg p-2 text-discord-white" placeholder="Short summary">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="inline-flex items-center gap-2 text-sm text-discord-light">
+                            <input id="upload-confirm" type="checkbox" class="rounded border-discord-divider bg-discord-darker">
+                            Require confirm (CLI style)
+                        </label>
+                        <button type="submit" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Start upload</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="batches" class="space-y-6">
+            <h2 class="text-2xl font-bold">Batches</h2>
+            <div class="bg-discord-dark border border-discord-divider rounded-2xl p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="text-discord-light">
+                            <tr class="text-left border-b border-discord-divider">
+                                <th class="py-2">Batch ID</th>
+                                <th class="py-2">Name</th>
+                                <th class="py-2">Size</th>
+                                <th class="py-2">Status</th>
+                                <th class="py-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="actions" class="space-y-4">
+            <h2 class="text-2xl font-bold">Sync & Backup</h2>
+            <div class="flex flex-wrap gap-4">
+                <button id="sync-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Sync from Discord</button>
+                <button id="sync-reset-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Sync (Reset)</button>
+                <button id="backup-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Backup DB</button>
+                <button id="backup-upload-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold transition-transform hover:scale-105">Backup + Upload</button>
+            </div>
+        </section>
+
+        <section id="jobs" class="space-y-4">
+            <h2 class="text-2xl font-bold">Job Status</h2>
+            <div class="bg-discord-dark border border-discord-divider rounded-2xl p-6 space-y-3">
+                <div id="job-summary" class="text-discord-light text-sm">No active job.</div>
+                <div class="h-2 rounded-full bg-discord-darker overflow-hidden">
+                    <div id="job-progress" class="h-full bg-white transition-all" style="width: 0%;"></div>
+                </div>
+                <pre id="job-logs" class="text-xs bg-discord-darker rounded-lg p-3 overflow-x-auto text-discord-light min-h-[120px]"></pre>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const jobSummary = document.getElementById('job-summary');
+        const jobLogs = document.getElementById('job-logs');
+        const jobProgress = document.getElementById('job-progress');
+        let activeJobId = null;
+        let jobTimer = null;
+
+        const formatBytes = (bytes) => {
+            if (!bytes && bytes !== 0) return '--';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let size = bytes;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex += 1;
+            }
+            return `${size.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`;
+        };
+
+        const startJob = (jobId) => {
+            activeJobId = jobId;
+            jobSummary.textContent = `Job ${jobId} running...`;
+            jobLogs.textContent = '';
+            jobProgress.style.width = '0%';
+            if (jobTimer) clearInterval(jobTimer);
+            jobTimer = setInterval(refreshJob, 2000);
+            refreshJob();
+        };
+
+        const refreshJob = async () => {
+            if (!activeJobId) return;
+            const res = await fetch(`/api/jobs/${activeJobId}`);
+            if (!res.ok) {
+                jobSummary.textContent = 'Job not found.';
+                clearInterval(jobTimer);
+                return;
+            }
+            const data = await res.json();
+            const statusIcon = data.status === 'complete' ? '✅'
+                : data.status === 'failed' ? '❌'
+                : data.status === 'running' ? '⏳'
+                : '🧾';
+            jobSummary.textContent = `${statusIcon} ${data.type.toUpperCase()} • ${data.status}`;
+            const logs = (data.logs || []).slice();
+            if (data.error) {
+                logs.push(`❌ ERROR: ${data.error}`);
+            }
+            if (data.result) {
+                logs.push(`✅ RESULT: ${JSON.stringify(data.result)}`);
+            }
+            jobLogs.textContent = logs.join('\n');
+            jobProgress.style.width = `${data.progress || 0}%`;
+            if (data.status === 'complete' || data.status === 'failed') {
+                clearInterval(jobTimer);
+            }
+        };
+
+        const loadStats = async () => {
+            const res = await fetch('/api/stats');
+            const stats = await res.json();
+            document.getElementById('stat-batches').textContent = stats.batch_count ?? '--';
+            document.getElementById('stat-total').textContent = formatBytes(stats.total_size);
+            document.getElementById('stat-compressed').textContent = formatBytes(stats.compressed_size);
+            document.getElementById('stat-chunks').textContent = stats.chunk_count ?? '--';
+        };
+
+        const loadBatches = async () => {
+            const res = await fetch('/api/batches');
+            const batches = await res.json();
+            const table = document.getElementById('batch-table');
+            table.innerHTML = '';
+            batches.forEach((batch) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-discord-divider';
+                row.innerHTML = `
+                    <td class="py-3 font-mono text-xs">${batch.batch_id}</td>
+                    <td class="py-3">${batch.original_name}</td>
+                    <td class="py-3">${formatBytes(batch.total_size)}</td>
+                    <td class="py-3">${batch.status}</td>
+                    <td class="py-3 text-right space-x-2">
+                        <button class="bg-white text-black px-3 py-1 rounded-full text-xs font-bold" data-action="download" data-id="${batch.batch_id}">Download</button>
+                        <button class="bg-white text-black px-3 py-1 rounded-full text-xs font-bold" data-action="verify" data-id="${batch.batch_id}">Verify</button>
+                        <button class="bg-white text-black px-3 py-1 rounded-full text-xs font-bold" data-action="delete" data-id="${batch.batch_id}">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        };
+
+        document.getElementById('refresh-btn').addEventListener('click', async () => {
+            await loadStats();
+            await loadBatches();
+        });
+
+        const uploadToggle = document.getElementById('upload-folder-toggle');
+        const uploadInput = document.getElementById('upload-file');
+
+        const updateUploadMode = () => {
+            if (uploadToggle.checked) {
+                uploadInput.setAttribute('webkitdirectory', '');
+                uploadInput.setAttribute('multiple', '');
+            } else {
+                uploadInput.removeAttribute('webkitdirectory');
+                uploadInput.removeAttribute('multiple');
+            }
+            uploadInput.value = '';
+        };
+
+        uploadToggle.addEventListener('change', updateUploadMode);
+        updateUploadMode();
+
+        document.getElementById('upload-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const fileInput = document.getElementById('upload-file');
+            if (!fileInput.files.length) {
+                alert('Choose a file to upload.');
+                return;
+            }
+            const formData = new FormData();
+            Array.from(fileInput.files).forEach((file) => {
+                formData.append('files', file);
+            });
+            formData.append('title', document.getElementById('upload-title').value);
+            formData.append('tags', document.getElementById('upload-tags').value);
+            formData.append('description', document.getElementById('upload-description').value);
+            formData.append('confirm', document.getElementById('upload-confirm').checked);
+            const res = await fetch('/api/jobs/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            startJob(data.job_id);
+        });
+
+        document.getElementById('batch-table').addEventListener('click', async (event) => {
+            const button = event.target.closest('button');
+            if (!button) return;
+            const action = button.dataset.action;
+            const batchId = button.dataset.id;
+            if (action === 'download') {
+                const res = await fetch('/api/jobs/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batch_id: batchId })
+                });
+                const data = await res.json();
+                startJob(data.job_id);
+            }
+            if (action === 'verify') {
+                const res = await fetch('/api/jobs/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batch_id: batchId })
+                });
+                const data = await res.json();
+                startJob(data.job_id);
+            }
+            if (action === 'delete') {
+                const confirmDelete = confirm('Delete local metadata for this batch?');
+                if (!confirmDelete) return;
+                const deleteRemote = confirm('Also delete Discord thread/card?');
+                const res = await fetch('/api/jobs/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batch_id: batchId, delete_remote: deleteRemote })
+                });
+                const data = await res.json();
+                startJob(data.job_id);
+                await loadBatches();
+            }
+        });
+
+        document.getElementById('sync-btn').addEventListener('click', async () => {
+            const res = await fetch('/api/jobs/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reset: false })
+            });
+            const data = await res.json();
+            startJob(data.job_id);
+        });
+
+        document.getElementById('sync-reset-btn').addEventListener('click', async () => {
+            const res = await fetch('/api/jobs/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reset: true })
+            });
+            const data = await res.json();
+            startJob(data.job_id);
+        });
+
+        document.getElementById('backup-btn').addEventListener('click', async () => {
+            const res = await fetch('/api/jobs/backup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ upload_to_discord: false })
+            });
+            const data = await res.json();
+            startJob(data.job_id);
+        });
+
+        document.getElementById('backup-upload-btn').addEventListener('click', async () => {
+            const res = await fetch('/api/jobs/backup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ upload_to_discord: true })
+            });
+            const data = await res.json();
+            startJob(data.job_id);
+        });
+
+        window.addEventListener('load', async () => {
+            await loadStats();
+            await loadBatches();
+        });
+    </script>
+</body>
+</html>
