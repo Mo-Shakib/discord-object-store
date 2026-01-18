@@ -28,7 +28,9 @@ pip install -r requirements.txt
 
 ### 2. Configuration
 
-Create a Discord Application in the [Developer Portal](https://www.google.com/search?q=https://discord.com/developers/applications), invite the bot to your server, and run the interactive setup wizard:
+Create a Discord Application in the [Developer Portal](https://discord.com/developers/applications), invite the bot to your server, and run the interactive setup wizard.
+
+For a complete, step-by-step walkthrough, see `discord-bot-setup.md`.
 
 ```
 python setup.py
@@ -114,4 +116,4 @@ Contributions are welcome. Please adhere to the following workflow:
 
 1. Fork the repository and create a feature branch.
 2. Ensure changes are well-documented and tested.
-3. Submit a Pull Request linking
+3. Submit a Pull Request linking relevant issues.

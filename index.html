@@ -184,7 +184,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <div class="inline-flex items-center px-4 py-2 rounded-full border border-discord-light/20 bg-discord-dark/50 backdrop-blur-sm mb-8 reveal">
                 <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
-                <span class="text-sm font-mono text-discord-light">v3.0.0 Latest Release</span>
+                <span class="text-sm font-mono text-discord-light">v4.0.0 Latest Release</span>
             </div>
 
             <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 reveal" style="transition-delay: 100ms;">
@@ -192,9 +192,9 @@
                 <span class="text-gradient">Discord Channels</span>
             </h1>
 
-            <p class="mt-4 max-w-2xl mx-auto text-xl text-discord-light reveal" style="transition-delay: 200ms;">
+                <p class="mt-4 max-w-2xl mx-auto text-xl text-discord-light reveal" style="transition-delay: 200ms;">
                 Turn Discord into secure, distributed file storage with compression, encryption,
-                chunked uploads, and a local metadata database for fast search.
+                chunked uploads, and a local metadata database plus a live Web UI.
             </p>
 
             <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4 px-4 sm:px-0 reveal" style="transition-delay: 300ms;">
@@ -302,6 +302,15 @@
                     </div>
                     <h3 class="text-xl font-bold mb-2">Friendly CLI</h3>
                     <p class="text-discord-light text-sm leading-relaxed">Simple CLI for uploads, downloads, listing, info, and stats—built for non-technical users.</p>
+                </div>
+
+                <!-- Feature 7 -->
+                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
+                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-desktop text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Web UI Dashboard</h3>
+                    <p class="text-discord-light text-sm leading-relaxed">FastAPI-powered Web UI with live job status, uploads, batch browsing, and system actions.</p>
                 </div>
             </div>
         </div>
@@ -455,10 +464,37 @@ pip install -r requirements.txt</code></pre>
             <h2 class="text-3xl font-bold text-white mb-10 text-center reveal">Change Log</h2>
             
             <div class="relative border-l-2 border-discord-light/20 ml-3 space-y-12 reveal">
-                <!-- v3.0.0 -->
+                <!-- v4.0.0 -->
                 <div class="relative pl-8">
                     <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-green-500 ring-4 ring-discord-dark"></span>
-                    <h3 class="text-xl font-bold text-white mb-2">v3.0.0 <span class="text-sm font-normal text-discord-light ml-2 bg-discord-darker px-2 py-0.5 rounded border border-discord-divider">Latest</span></h3>
+                    <h3 class="text-xl font-bold text-white mb-2">v4.0.0 <span class="text-sm font-normal text-discord-light ml-2 bg-discord-darker px-2 py-0.5 rounded border border-discord-divider">Latest</span></h3>
+                    <p class="text-discord-light text-sm mb-4">Discord-style Web UI with live jobs, uploads, and batch management.</p>
+                    
+                    <div class="bg-discord-bg rounded-lg border border-discord-divider p-6">
+                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-desktop text-green-400"></i> v4 Highlights
+                        </h4>
+                        <ul class="space-y-3 text-sm text-discord-light">
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>Web UI:</strong> New dashboard with live job runner, stats, and uploads.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>Batch Explorer:</strong> Searchable table with hover actions and metadata.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                                <span><strong>System Actions:</strong> One-click sync, backup, and reset workflows.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- v3.0.0 -->
+                <div class="relative pl-8">
+                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-discord-light/50 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2">v3.0.0</h3>
                     <p class="text-discord-light text-sm mb-4">New storage workflow with CLI commands, SQLite metadata, and faster sync.</p>
                     
                     <div class="bg-discord-bg rounded-lg border border-discord-divider p-6">
