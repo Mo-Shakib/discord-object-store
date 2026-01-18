@@ -68,11 +68,15 @@
 
         /* Animation Utilities */
         .reveal {
-            opacity: 0;
-            transform: translateY(30px);
+            opacity: 1;
+            transform: translateY(0);
             transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
         }
-        .reveal.active {
+        .js-enabled .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        .js-enabled .reveal.active {
             opacity: 1;
             transform: translateY(0);
         }
@@ -725,6 +729,7 @@ pip install -r requirements.txt</code></pre>
 
         // Intersection Observer for scroll animations
         document.addEventListener('DOMContentLoaded', () => {
+            document.documentElement.classList.add('js-enabled');
             const observerOptions = {
                 root: null,
                 rootMargin: '0px',
