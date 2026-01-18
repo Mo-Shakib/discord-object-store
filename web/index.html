@@ -20,7 +20,6 @@
                 extend: {
                     colors: {
                         discord: {
-                            // Concept Palette
                             bg: '#313338',
                             sidebar: '#2b2d31',
                             element: '#1e1f22',
@@ -31,14 +30,10 @@
                             divider: '#1f2023',
                             brand: '#5865F2',
                             brandHover: '#4752c4',
-                            green: '#23a559',
-                            red: '#da373c',
-                            yellow: '#f0b232',
-
-                            // Legacy mappings
-                            dark: '#2b2d31',
-                            darker: '#1e1f22',
-                            accent: '#ffffff',
+                            success: '#23a559',
+                            danger: '#da373c',
+                            warning: '#f0b232',
+                            info: '#00a8fc'
                         }
                     },
                     fontFamily: {
@@ -46,13 +41,23 @@
                         mono: ['JetBrains Mono', 'monospace'],
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.2s ease-out',
+                        'fade-in': 'fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'slide-up': 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
                     keyframes: {
                         fadeIn: {
                             '0%': { opacity: '0' },
                             '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
                         }
+                    },
+                    boxShadow: {
+                        'glow': '0 0 15px rgba(88, 101, 242, 0.15)',
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                     }
                 }
             }
@@ -63,14 +68,16 @@
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
-            background-color: #2b2d31;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: #1a1b1e;
-            border-radius: 4px;
         }
         ::-webkit-scrollbar-track {
-            background-color: #2b2d31;
+            background-color: #2b2d31; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #1a1b1e; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #5865F2;
         }
 
         .view-section {
@@ -83,196 +90,297 @@
             opacity: 1;
         }
 
-        input[type="text"], input[type="file"] {
+        input[type="text"], textarea {
             outline: none;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
-        input[type="text"]:focus {
+        input[type="text"]:focus, textarea:focus {
             border-color: #5865F2;
+            box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+        }
+
+        .drop-zone {
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23B5BAC144' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            transition: all 0.3s;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%235865F2' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            background-color: rgba(88, 101, 242, 0.05);
         }
     </style>
 </head>
 <body class="bg-discord-bg text-discord-white font-sans h-screen flex overflow-hidden selection:bg-discord-brand selection:text-white">
 
-    <aside class="w-72 bg-discord-sidebar flex flex-col border-r border-discord-divider shrink-0 z-30">
-        <div class="h-16 flex items-center px-5 border-b border-discord-divider shrink-0">
-            <i class="fa-brands fa-discord text-3xl text-discord-brand mr-3"></i>
+    <aside class="w-72 bg-discord-sidebar flex flex-col border-r border-discord-divider shrink-0 z-30 shadow-xl">
+        <div class="h-20 flex items-center px-6 border-b border-discord-divider shrink-0 gap-3">
+            <div class="w-10 h-10 rounded-xl bg-discord-brand flex items-center justify-center shadow-glow">
+                <i class="fa-brands fa-discord text-2xl text-white"></i>
+            </div>
             <div>
-                <h1 class="font-extrabold text-base tracking-tight leading-tight">OBJECT STORE</h1>
-                <div class="text-[10px] text-discord-light font-mono bg-discord-element px-1.5 rounded inline-block mt-0.5">WEB UI</div>
+                <h1 class="font-extrabold text-lg tracking-tight leading-none text-white">Object Store</h1>
+                <span class="text-[10px] font-mono text-discord-brand uppercase tracking-wider font-bold">Manager v1.0</span>
             </div>
         </div>
 
-        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center px-3 py-2 text-discord-white bg-discord-hover rounded-[30px] transition-all group active">
-                <i class="fa-solid fa-chart-pie w-6 text-center group-hover:text-discord-brand transition-colors"></i>
-                <span class="font-medium text-sm ml-2">Dashboard</span>
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-2">
+            <div class="text-xs font-bold text-discord-light uppercase tracking-wider px-4 mb-2 opacity-80">Menu</div>
+            
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center px-4 py-3 rounded-xl transition-all group active text-discord-white bg-discord-brand/10 text-discord-brand">
+                <i class="fa-solid fa-chart-pie w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+                <span class="font-medium text-sm ml-3">Dashboard</span>
             </button>
 
-            <button onclick="switchView('upload')" id="nav-upload" class="nav-item w-full flex items-center px-3 py-2 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-[30px] transition-all group">
-                <i class="fa-solid fa-cloud-arrow-up w-6 text-center group-hover:text-discord-brand transition-colors"></i>
-                <span class="font-medium text-sm ml-2">Upload</span>
+            <button onclick="switchView('upload')" id="nav-upload" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group">
+                <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+                <span class="font-medium text-sm ml-3">Upload Artifact</span>
             </button>
 
-            <button onclick="switchView('batches')" id="nav-batches" class="nav-item w-full flex items-center px-3 py-2 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-[30px] transition-all group">
-                <i class="fa-solid fa-layer-group w-6 text-center group-hover:text-discord-brand transition-colors"></i>
-                <span class="font-medium text-sm ml-2">All Batches</span>
+            <button onclick="switchView('batches')" id="nav-batches" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group">
+                <i class="fa-solid fa-layer-group w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+                <span class="font-medium text-sm ml-3">File Batches</span>
             </button>
 
-            <button onclick="switchView('actions')" id="nav-actions" class="nav-item w-full flex items-center px-3 py-2 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-[30px] transition-all group">
-                <i class="fa-solid fa-sliders w-6 text-center group-hover:text-discord-brand transition-colors"></i>
-                <span class="font-medium text-sm ml-2">Actions</span>
+            <div class="my-4 border-t border-discord-divider mx-2"></div>
+            <div class="text-xs font-bold text-discord-light uppercase tracking-wider px-4 mb-2 opacity-80">System</div>
+
+            <button onclick="switchView('actions')" id="nav-actions" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group">
+                <i class="fa-solid fa-sliders w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+                <span class="font-medium text-sm ml-3">Maintenance</span>
             </button>
         </nav>
 
         <div class="p-4 bg-discord-element/50 border-t border-discord-divider shrink-0">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 bg-discord-bg/50 p-3 rounded-xl border border-discord-divider/50">
                 <div class="relative">
-                    <div class="w-9 h-9 rounded-full bg-discord-brand flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                        <i class="fa-solid fa-link"></i>
+                    <div class="w-10 h-10 rounded-full bg-discord-element flex items-center justify-center border border-discord-divider">
+                        <i class="fa-solid fa-server text-discord-light"></i>
                     </div>
-                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-discord-element rounded-full flex items-center justify-center">
-                        <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-discord-bg rounded-full flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse-slow shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                     </div>
                 </div>
                 <div class="flex-1 overflow-hidden">
-                    <div class="text-sm font-bold text-white truncate">Connected</div>
-                    <div class="text-xs text-discord-light font-mono truncate">API Ready</div>
+                    <div class="text-sm font-bold text-white truncate">Store Online</div>
+                    <div class="text-[11px] text-discord-light font-mono truncate">Gateway: <span class="text-green-400">Connected</span></div>
                 </div>
             </div>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-discord-bg">
-        <header class="h-16 bg-discord-bg border-b border-discord-divider flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
-            <div class="flex items-center gap-4">
-                <nav class="flex items-center text-sm font-medium text-discord-light">
-                    <span class="hover:text-white cursor-pointer transition-colors"><i class="fa-solid fa-house mr-2"></i>root</span>
-                    <span class="mx-2 text-discord-light/30">/</span>
-                    <span id="breadcrumb-current" class="text-white">dashboard</span>
-                </nav>
+        <header class="h-20 bg-discord-bg/95 backdrop-blur-sm border-b border-discord-divider flex items-center justify-between px-8 shrink-0 z-20 sticky top-0">
+            <div class="flex flex-col justify-center">
+                 <h2 id="page-title" class="text-xl font-bold text-white tracking-tight">Dashboard</h2>
+                 <div class="flex items-center text-xs text-discord-light mt-1 font-mono">
+                    <i class="fa-solid fa-folder-tree mr-2 opacity-60"></i>
+                    <span>root</span>
+                    <span class="mx-2 opacity-30">/</span>
+                    <span id="breadcrumb-current" class="text-discord-brand">overview</span>
+                 </div>
             </div>
             
             <div class="flex items-center gap-4">
-                <button id="refresh-btn" class="flex items-center gap-2 px-4 py-2 bg-discord-brand hover:bg-discord-brandHover text-white text-xs font-bold rounded-[30px] transition-colors shadow-sm">
-                    <i class="fa-solid fa-rotate"></i> Refresh
+                <div class="relative group">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-discord-light group-focus-within:text-discord-brand transition-colors"></i>
+                    <input type="text" placeholder="Global Search..." class="bg-discord-element border border-discord-divider rounded-full py-2 pl-10 pr-4 text-sm w-64 text-white focus:w-72 transition-all shadow-sm">
+                </div>
+                <button id="refresh-btn" class="w-10 h-10 rounded-full bg-discord-element hover:bg-discord-brand text-discord-light hover:text-white border border-discord-divider hover:border-discord-brand transition-all flex items-center justify-center shadow-sm" title="Refresh Data">
+                    <i class="fa-solid fa-rotate"></i>
                 </button>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-6 scroll-smooth relative" id="main-container">
+        <div class="flex-1 overflow-y-auto p-8 scroll-smooth" id="main-container">
             
-            <section id="dashboard" class="view-section active animate-fade-in space-y-6">
-                <div class="relative w-full max-w-md">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light"></i>
-                    <input type="text" placeholder="Search dashboard..." class="w-full bg-discord-sidebar border border-discord-divider rounded-[30px] py-3 pl-12 pr-4 text-white text-sm focus:border-discord-brand transition-colors placeholder-discord-light/50">
-                </div>
-
+            <section id="dashboard" class="view-section active animate-fade-in space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Total Batches</h3>
-                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-purple-400">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Total Batches</h3>
+                                <div id="stat-batches" class="text-3xl font-extrabold text-white">--</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
                                 <i class="fa-solid fa-layer-group"></i>
                             </div>
                         </div>
-                        <div id="stat-batches" class="text-2xl font-bold text-white">--</div>
+                        <div class="text-xs text-discord-light relative z-10">
+                            <span class="text-green-400"><i class="fa-solid fa-arrow-up"></i> Live</span> tracking enabled
+                        </div>
                     </div>
 
-                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Total Size</h3>
-                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-green-400">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-hard-drive"></i>
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Total Size</h3>
+                                <div id="stat-total" class="text-3xl font-extrabold text-white">--</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20">
                                 <i class="fa-solid fa-hard-drive"></i>
                             </div>
                         </div>
-                        <div id="stat-total" class="text-2xl font-bold text-white">--</div>
+                        <div class="text-xs text-discord-light relative z-10">
+                            Remote storage usage
+                        </div>
                     </div>
 
-                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Compressed</h3>
-                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-blue-400">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                            <i class="fa-regular fa-file-zipper"></i>
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Compressed</h3>
+                                <div id="stat-compressed" class="text-3xl font-extrabold text-white">--</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
                                 <i class="fa-regular fa-file-zipper"></i>
                             </div>
                         </div>
-                        <div id="stat-compressed" class="text-2xl font-bold text-white">--</div>
+                        <div class="text-xs text-discord-light relative z-10">
+                            Optimized storage
+                        </div>
                     </div>
 
-                    <div class="bg-discord-sidebar rounded-[30px] p-6 border border-discord-divider relative overflow-hidden group">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider">Total Chunks</h3>
-                            <div class="w-8 h-8 rounded-[30px] bg-discord-element flex items-center justify-center text-yellow-500">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-puzzle-piece"></i>
+                        </div>
+                        <div class="flex justify-between items-start mb-4 relative z-10">
+                            <div>
+                                <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Chunks</h3>
+                                <div id="stat-chunks" class="text-3xl font-extrabold text-white">--</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20">
                                 <i class="fa-solid fa-puzzle-piece"></i>
                             </div>
                         </div>
-                        <div id="stat-chunks" class="text-2xl font-bold text-white">--</div>
+                        <div class="text-xs text-discord-light relative z-10">
+                            Distributed file parts
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-[#1e1f22] rounded-[30px] border border-discord-divider flex flex-col shadow-2xl overflow-hidden font-mono text-sm min-h-[300px]">
-                    <div class="bg-[#2b2d31] px-6 py-3 border-b border-discord-divider flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <div class="flex gap-1.5">
-                                <div class="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
-                                <div class="w-3 h-3 rounded-full bg-[#febc2e]"></div>
-                                <div class="w-3 h-3 rounded-full bg-[#28c840]"></div>
+                <div class="grid grid-cols-1 gap-6 animate-slide-up">
+                    <div class="bg-discord-element rounded-2xl border border-discord-divider flex flex-col shadow-2xl overflow-hidden min-h-[400px]">
+                        <div class="bg-[#2b2d31] px-5 py-3 border-b border-discord-divider flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 cursor-pointer"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 cursor-pointer"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 cursor-pointer"></div>
+                                </div>
+                                <div class="h-4 w-[1px] bg-discord-divider"></div>
+                                <span class="font-mono text-xs text-discord-light flex items-center gap-2">
+                                    <i class="fa-solid fa-terminal text-discord-brand"></i>
+                                    runner.exe — active job
+                                </span>
                             </div>
-                            <span class="ml-3 text-xs text-discord-light opacity-70">runner — active job</span>
+                            <div id="job-summary" class="text-xs font-mono font-bold text-discord-light uppercase bg-discord-bg px-3 py-1 rounded-md border border-discord-divider">
+                                IDLE
+                            </div>
                         </div>
-                        <div id="job-summary" class="text-xs text-discord-light font-bold uppercase">No active job</div>
-                    </div>
 
-                    <div class="h-1 bg-discord-bg w-full">
-                        <div id="job-progress" class="h-full bg-discord-brand transition-all duration-300 ease-out" style="width: 0%;"></div>
+                        <div class="h-1 bg-discord-bg w-full">
+                            <div id="job-progress" class="h-full bg-gradient-to-r from-discord-brand to-purple-500 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(88,101,242,0.5)]" style="width: 0%;"></div>
+                        </div>
+                        
+                        <pre id="job-logs" class="flex-1 p-6 font-mono text-sm text-discord-light/90 whitespace-pre-wrap overflow-y-auto custom-scrollbar selection:bg-discord-brand selection:text-white leading-relaxed">
+<span class="text-discord-brand">➜</span> System initialized.
+<span class="text-discord-brand">➜</span> Waiting for job dispatch...
+                        </pre>
                     </div>
-                    
-                    <pre id="job-logs" class="flex-1 p-6 overflow-y-auto text-discord-light/90 whitespace-pre-wrap bg-[#1e1f22] scrollbar-thin"></pre>
                 </div>
             </section>
 
-            <section id="upload" class="view-section animate-fade-in space-y-6">
-                <div class="bg-discord-sidebar rounded-[30px] border border-discord-divider overflow-hidden">
-                    <div class="px-6 py-4 border-b border-discord-divider bg-discord-element/50">
-                        <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-cloud-arrow-up mr-2 text-discord-brand"></i>Upload New Artifact</h2>
+            <section id="upload" class="view-section animate-fade-in space-y-6 max-w-4xl mx-auto">
+                <div class="bg-discord-sidebar rounded-2xl border border-discord-divider overflow-hidden shadow-card">
+                    <div class="p-8 border-b border-discord-divider">
+                        <h2 class="text-2xl font-bold text-white mb-2">Upload New Artifact</h2>
+                        <p class="text-discord-light text-sm">Select files or folders to compress and upload to the Object Store.</p>
                     </div>
                     
-                    <div class="p-6">
-                        <form id="upload-form" class="space-y-6 max-w-2xl">
-                            <div class="space-y-2">
+                    <div class="p-8">
+                        <form id="upload-form" class="space-y-8">
+                            <div class="space-y-3">
                                 <label class="text-xs font-bold text-discord-light uppercase tracking-wide">File Selection</label>
-                                <div class="bg-discord-element border border-discord-divider rounded-[30px] p-4 transition-colors hover:border-discord-light/30">
-                                    <input id="upload-file" type="file" class="block w-full text-sm text-discord-light file:mr-4 file:py-2 file:px-4 file:rounded-[30px] file:border-0 file:text-xs file:font-semibold file:bg-discord-brand file:text-white hover:file:bg-discord-brandHover cursor-pointer">
+                                <div id="drop-area" class="drop-zone rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer min-h-[200px] relative group">
+                                    <input id="upload-file" type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    
+                                    <div class="w-16 h-16 bg-discord-brand/10 rounded-full flex items-center justify-center text-discord-brand mb-4 group-hover:scale-110 transition-transform duration-300">
+                                        <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                                    </div>
+                                    <h3 class="text-white font-bold text-lg mb-1">Click to browse or drag file here</h3>
+                                    <p class="text-discord-light text-sm max-w-xs mx-auto">Supports individual files or directory structures (when folder mode is active).</p>
+                                    <div id="file-name-display" class="mt-4 px-4 py-2 bg-discord-brand rounded-full text-xs font-bold text-white hidden animate-fade-in">
+                                        <i class="fa-solid fa-file mr-2"></i> <span id="selected-filename">filename.zip</span>
+                                    </div>
                                 </div>
-                                <div class="flex items-center gap-2 mt-2">
-                                    <input id="upload-folder-toggle" type="checkbox" class="rounded border-discord-divider bg-discord-element text-discord-brand focus:ring-0">
-                                    <label for="upload-folder-toggle" class="text-sm text-discord-light cursor-pointer select-none">Upload as folder (preserves relative paths)</label>
+                                <div class="flex items-center gap-3 mt-2 pl-1">
+                                    <div class="relative inline-block w-10 h-6 align-middle select-none transition duration-200 ease-in">
+                                        <input type="checkbox" name="toggle" id="upload-folder-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer left-1 top-1 transition-all duration-300"/>
+                                        <label for="upload-folder-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-discord-element border border-discord-divider cursor-pointer"></label>
+                                    </div>
+                                    <label for="upload-folder-toggle" class="text-sm font-medium text-discord-light cursor-pointer select-none">Upload as folder (preserves relative paths)</label>
                                 </div>
+                                <style>
+                                    #upload-folder-toggle:checked + .toggle-label {
+                                        background-color: #5865F2;
+                                        border-color: #5865F2;
+                                    }
+                                    #upload-folder-toggle:checked {
+                                        right: 0;
+                                        border-color: #5865F2;
+                                        transform: translateX(100%);
+                                    }
+                                </style>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Title</label>
-                                    <input id="upload-title" type="text" class="w-full bg-discord-element border border-discord-divider rounded-[30px] p-3 px-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="e.g. Project Phoenix Assets">
+                                    <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Artifact Title</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-tag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50"></i>
+                                        <input id="upload-title" type="text" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="e.g. Project Phoenix Assets">
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Tags</label>
-                                    <input id="upload-tags" type="text" class="w-full bg-discord-element border border-discord-divider rounded-[30px] p-3 px-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="backup, v1, release">
+                                    <div class="relative">
+                                        <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50"></i>
+                                        <input id="upload-tags" type="text" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="backup, v1, release">
+                                    </div>
                                 </div>
                             </div>
 
                             <div>
                                 <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Description</label>
-                                <input id="upload-description" type="text" class="w-full bg-discord-element border border-discord-divider rounded-[30px] p-3 px-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="Brief summary of contents...">
+                                <textarea id="upload-description" rows="3" class="w-full bg-discord-element border border-discord-divider rounded-xl p-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand resize-none" placeholder="Brief summary of contents..."></textarea>
                             </div>
 
-                            <div class="pt-4 border-t border-discord-divider flex items-center justify-between">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input id="upload-confirm" type="checkbox" class="rounded border-discord-divider bg-discord-element text-discord-brand focus:ring-0">
-                                    <span class="text-sm text-discord-light">Require CLI Confirmation</span>
+                            <div class="pt-6 border-t border-discord-divider flex items-center justify-between">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="w-5 h-5 rounded border border-discord-divider bg-discord-element flex items-center justify-center group-hover:border-discord-brand transition-colors">
+                                        <input id="upload-confirm" type="checkbox" class="appearance-none w-full h-full checked:bg-discord-brand rounded-sm cursor-pointer">
+                                        <i class="fa-solid fa-check text-white text-[10px] absolute opacity-0 check-icon pointer-events-none"></i>
+                                        <style>
+                                            #upload-confirm:checked + .check-icon { opacity: 1; }
+                                        </style>
+                                    </div>
+                                    <span class="text-sm text-discord-light group-hover:text-white transition-colors">Require CLI Confirmation</span>
                                 </label>
-                                <button type="submit" class="bg-discord-brand hover:bg-discord-brandHover text-white px-8 py-3 rounded-[30px] font-bold shadow-lg transition-all transform active:scale-95 text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-play"></i> Start Upload
+                                <button type="submit" class="bg-discord-brand hover:bg-discord-brandHover text-white px-10 py-3 rounded-full font-bold shadow-glow transition-all transform active:scale-95 text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-rocket"></i> Start Upload
                                 </button>
                             </div>
                         </form>
@@ -281,71 +389,113 @@
             </section>
 
             <section id="batches" class="view-section animate-fade-in space-y-6">
-                 <div class="relative w-full max-w-md">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light"></i>
-                    <input type="text" placeholder="Search batches..." class="w-full bg-discord-sidebar border border-discord-divider rounded-[30px] py-3 pl-12 pr-4 text-white text-sm focus:border-discord-brand transition-colors placeholder-discord-light/50">
+                 <div class="flex items-center justify-between bg-discord-sidebar p-2 rounded-2xl border border-discord-divider">
+                    <div class="relative w-full max-w-md">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light"></i>
+                        <input type="text" placeholder="Filter batches..." class="w-full bg-transparent border-none rounded-xl py-3 pl-12 pr-4 text-white text-sm focus:ring-0 placeholder-discord-light/50">
+                    </div>
+                    <div class="flex gap-2 pr-2">
+                         <button class="w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors" title="Grid View (Coming Soon)">
+                            <i class="fa-solid fa-grip"></i>
+                         </button>
+                         <button class="w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-list"></i>
+                         </button>
+                    </div>
                 </div>
 
-                <div class="bg-discord-sidebar border border-discord-divider rounded-[30px] overflow-hidden shadow-sm">
-                    <div class="px-6 py-4 border-b border-discord-divider bg-discord-element/50 flex justify-between items-center">
-                        <h2 class="text-lg font-bold text-white">All Batches</h2>
-                        <div class="text-xs text-discord-light font-mono">/mnt/data/batches</div>
-                    </div>
-                    
+                <div class="bg-discord-sidebar border border-discord-divider rounded-2xl overflow-hidden shadow-card">
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead class="bg-discord-element text-xs text-discord-light uppercase font-mono">
-                                <tr class="text-left">
-                                    <th class="px-6 py-3 font-medium">Batch ID</th>
-                                    <th class="px-6 py-3 font-medium">Name</th>
-                                    <th class="px-6 py-3 font-medium">Size</th>
-                                    <th class="px-6 py-3 font-medium">Status</th>
-                                    <th class="px-6 py-3 font-medium text-right">Actions</th>
+                            <thead>
+                                <tr class="bg-discord-element border-b border-discord-divider text-left">
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider w-32">ID</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Artifact Name</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Size</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="batch-table" class="divide-y divide-discord-divider bg-discord-sidebar"></tbody>
+                            <tbody id="batch-table" class="divide-y divide-discord-divider">
+                            </tbody>
                         </table>
+                    </div>
+                    <div id="empty-state" class="hidden p-12 flex flex-col items-center justify-center text-center">
+                        <div class="w-16 h-16 bg-discord-element rounded-full flex items-center justify-center text-discord-light mb-4">
+                            <i class="fa-solid fa-box-open text-3xl"></i>
+                        </div>
+                        <h3 class="text-white font-bold text-lg">No Batches Found</h3>
+                        <p class="text-discord-light text-sm mt-1">Upload a new artifact to get started.</p>
                     </div>
                 </div>
             </section>
 
             <section id="actions" class="view-section animate-fade-in space-y-6">
-                <h2 class="text-lg font-bold text-white mb-4">Sync & Maintenance</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
-                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-white mb-3">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-discord-sidebar border border-discord-divider flex items-center justify-center text-discord-light">
+                        <i class="fa-solid fa-wrench"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">System Maintenance</h2>
+                        <p class="text-xs text-discord-light">Manage local database and synchronization.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-discord-brand/50 transition-all group relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <i class="fa-solid fa-arrows-rotate text-6xl text-white"></i>
+                        </div>
+                        <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-white mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-arrows-rotate"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Sync from Discord</h3>
-                        <p class="text-xs text-discord-light mb-4">Fetch latest metadata from channels.</p>
-                        <button id="sync-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Run Sync</button>
+                        <p class="text-xs text-discord-light mb-6 min-h-[32px]">Fetch latest metadata and verify integrity of remote channels.</p>
+                        <button id="sync-btn" class="w-full bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                            Run Sync
+                        </button>
                     </div>
 
-                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
-                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-yellow-500 mb-3">
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-red-500/50 transition-all group relative overflow-hidden">
+                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <i class="fa-solid fa-bomb text-6xl text-red-500"></i>
+                        </div>
+                        <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-red-500 mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-rotate-left"></i>
                         </div>
-                        <h3 class="font-bold text-white mb-1">Hard Reset Sync</h3>
-                        <p class="text-xs text-discord-light mb-4">Rebuild local DB from scratch.</p>
-                        <button id="sync-reset-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Run Reset</button>
+                        <h3 class="font-bold text-white mb-1">Hard Reset</h3>
+                        <p class="text-xs text-discord-light mb-6 min-h-[32px]">Rebuild local DB from scratch. <span class="text-red-400">Destructive action.</span></p>
+                        <button id="sync-reset-btn" class="w-full bg-discord-element hover:bg-red-500 hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                            Run Reset
+                        </button>
                     </div>
 
-                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
-                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-green-400 mb-3">
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-green-500/50 transition-all group relative overflow-hidden">
+                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <i class="fa-solid fa-floppy-disk text-6xl text-green-500"></i>
+                        </div>
+                        <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-green-400 mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-floppy-disk"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Local Backup</h3>
-                        <p class="text-xs text-discord-light mb-4">Dump local DB to a JSON file.</p>
-                        <button id="backup-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Backup DB</button>
+                        <p class="text-xs text-discord-light mb-6 min-h-[32px]">Dump local DB to a JSON file for safe keeping.</p>
+                        <button id="backup-btn" class="w-full bg-discord-element hover:bg-green-600 hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                            Create Backup
+                        </button>
                     </div>
 
-                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-[30px] hover:border-discord-light/50 transition-colors">
-                        <div class="w-10 h-10 bg-discord-element rounded-[30px] flex items-center justify-center text-discord-brand mb-3">
+                    <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-discord-brand/50 transition-all group relative overflow-hidden">
+                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <i class="fa-solid fa-cloud-arrow-up text-6xl text-discord-brand"></i>
+                        </div>
+                        <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-discord-brand mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-cloud-arrow-up"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Cloud Backup</h3>
-                        <p class="text-xs text-discord-light mb-4">Backup DB and upload to Discord.</p>
-                        <button id="backup-upload-btn" class="w-full bg-discord-element hover:bg-discord-hover text-white text-xs font-bold py-2.5 rounded-[30px] border border-discord-divider">Backup + Upload</button>
+                        <p class="text-xs text-discord-light mb-6 min-h-[32px]">Backup DB and upload directly to a Discord thread.</p>
+                        <button id="backup-upload-btn" class="w-full bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                            Backup + Upload
+                        </button>
                     </div>
                 </div>
             </section>
@@ -355,19 +505,20 @@
     <script>
         function switchView(viewName) {
             document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('bg-discord-hover', 'text-discord-white', 'active');
+                el.classList.remove('bg-discord-brand/10', 'text-discord-brand', 'active');
                 el.classList.add('text-discord-light');
             });
             
             const activeNav = document.getElementById(`nav-${viewName}`);
             if (activeNav) {
-                activeNav.classList.add('bg-discord-hover', 'text-discord-white', 'active');
                 activeNav.classList.remove('text-discord-light');
+                activeNav.classList.add('bg-discord-brand/10', 'text-discord-brand', 'active');
             }
 
-            let displayName = viewName;
-            if (viewName === 'batches') displayName = 'All Batches';
-            document.getElementById('breadcrumb-current').textContent = displayName;
+            let displayName = viewName.charAt(0).toUpperCase() + viewName.slice(1);
+            if (viewName === 'batches') displayName = 'File Batches';
+            document.getElementById('breadcrumb-current').textContent = displayName.toLowerCase();
+            document.getElementById('page-title').textContent = displayName;
 
             document.querySelectorAll('.view-section').forEach(el => {
                 el.classList.remove('active');
@@ -384,9 +535,52 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            switchView('dashboard');
+        const uploadToggle = document.getElementById('upload-folder-toggle');
+        const uploadInput = document.getElementById('upload-file');
+        const fileNameDisplay = document.getElementById('selected-filename');
+        const fileNameContainer = document.getElementById('file-name-display');
+        const dropArea = document.getElementById('drop-area');
+
+        const updateUploadMode = () => {
+            if (uploadToggle.checked) {
+                uploadInput.setAttribute('webkitdirectory', '');
+                uploadInput.setAttribute('multiple', '');
+            } else {
+                uploadInput.removeAttribute('webkitdirectory');
+                uploadInput.removeAttribute('multiple');
+            }
+            uploadInput.value = '';
+            fileNameContainer.classList.add('hidden');
+        };
+
+        uploadToggle.addEventListener('change', updateUploadMode);
+        
+        uploadInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                fileNameContainer.classList.remove('hidden');
+                if (this.files.length === 1) {
+                    fileNameDisplay.textContent = this.files[0].name;
+                } else {
+                    fileNameDisplay.textContent = `${this.files.length} files selected`;
+                }
+            } else {
+                fileNameContainer.classList.add('hidden');
+            }
         });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('drag-over');
+        }
+        function unhighlight() {
+            dropArea.classList.remove('drag-over');
+        }
 
         const jobSummary = document.getElementById('job-summary');
         const jobLogs = document.getElementById('job-logs');
@@ -408,106 +602,138 @@
 
         const startJob = (jobId) => {
             activeJobId = jobId;
-            jobSummary.textContent = `Job ${jobId} running...`;
-            jobLogs.textContent = '';
+            jobSummary.textContent = `JOB #${jobId}`;
+            jobSummary.className = "text-xs font-mono font-bold text-discord-brand uppercase bg-discord-brand/10 px-3 py-1 rounded-md border border-discord-brand/20";
+            
+            jobLogs.textContent = 'Initializing job sequence...\n';
             jobProgress.style.width = '0%';
+            
             switchView('dashboard');
+            
             if (jobTimer) clearInterval(jobTimer);
-            jobTimer = setInterval(refreshJob, 2000);
+            jobTimer = setInterval(refreshJob, 1000);
             refreshJob();
         };
 
         const refreshJob = async () => {
             if (!activeJobId) return;
-            const res = await fetch(`/api/jobs/${activeJobId}`);
-            if (!res.ok) {
-                jobSummary.textContent = 'Job not found.';
-                clearInterval(jobTimer);
-                return;
-            }
-            const data = await res.json();
-            const statusIcon = data.status === 'complete' ? '✅'
-                : data.status === 'failed' ? '❌'
-                : data.status === 'running' ? '⏳'
-                : '🧾';
-            jobSummary.textContent = `${statusIcon} ${data.type.toUpperCase()} • ${data.status}`;
-            const logs = (data.logs || []).slice();
-            if (data.error) {
-                logs.push(`❌ ERROR: ${data.error}`);
-            }
-            if (data.result) {
-                logs.push(`✅ RESULT: ${JSON.stringify(data.result)}`);
-            }
-            jobLogs.textContent = logs.join('\n');
-            jobProgress.style.width = `${data.progress || 0}%`;
-            jobLogs.scrollTop = jobLogs.scrollHeight;
-            if (data.status === 'complete' || data.status === 'failed') {
-                clearInterval(jobTimer);
+            try {
+                const res = await fetch(`/api/jobs/${activeJobId}`);
+                if (!res.ok) {
+                    jobSummary.textContent = 'JOB NOT FOUND';
+                    clearInterval(jobTimer);
+                    return;
+                }
+                const data = await res.json();
+                
+                let statusColor = 'text-discord-light';
+                if(data.status === 'complete') statusColor = 'text-green-400';
+                if(data.status === 'failed') statusColor = 'text-red-400';
+                if(data.status === 'running') statusColor = 'text-discord-brand';
+
+                jobSummary.innerHTML = `<span class="${statusColor}"><i class="fa-solid fa-circle text-[8px] mr-2"></i>${data.type.toUpperCase()} • ${data.status.toUpperCase()}</span>`;
+                
+                const logs = (data.logs || []).slice();
+                if (data.error) {
+                    logs.push(`❌ CRITICAL ERROR: ${data.error}`);
+                }
+                if (data.result) {
+                    logs.push(`✅ SUCCESS RESULT: ${JSON.stringify(data.result, null, 2)}`);
+                }
+                
+                jobLogs.textContent = logs.join('\n');
+                jobProgress.style.width = `${data.progress || 0}%`;
+                jobLogs.scrollTop = jobLogs.scrollHeight;
+                
+                if (data.status === 'complete' || data.status === 'failed') {
+                    clearInterval(jobTimer);
+                    if(data.status === 'complete') {
+                        loadStats();
+                        loadBatches();
+                    }
+                }
+            } catch (e) {
+                console.error("Poll error", e);
             }
         };
 
         const loadStats = async () => {
-            const res = await fetch('/api/stats');
-            const stats = await res.json();
-            document.getElementById('stat-batches').textContent = stats.batch_count ?? '--';
-            document.getElementById('stat-total').textContent = formatBytes(stats.total_size);
-            document.getElementById('stat-compressed').textContent = formatBytes(stats.compressed_size);
-            document.getElementById('stat-chunks').textContent = stats.chunk_count ?? '--';
+            try {
+                const res = await fetch('/api/stats');
+                const stats = await res.json();
+                document.getElementById('stat-batches').textContent = stats.batch_count ?? '--';
+                document.getElementById('stat-total').textContent = formatBytes(stats.total_size);
+                document.getElementById('stat-compressed').textContent = formatBytes(stats.compressed_size);
+                document.getElementById('stat-chunks').textContent = stats.chunk_count ?? '--';
+            } catch (e) { console.log("Stats load error"); }
         };
 
         const loadBatches = async () => {
-            const res = await fetch('/api/batches');
-            const batches = await res.json();
-            const table = document.getElementById('batch-table');
-            table.innerHTML = '';
-            batches.forEach((batch) => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-discord-divider hover:bg-discord-hover/50 transition-colors';
-                row.innerHTML = `
-                    <td class="px-6 py-4 font-mono text-xs text-discord-light">${batch.batch_id}</td>
-                    <td class="px-6 py-4 font-bold text-white">${batch.original_name}</td>
-                    <td class="px-6 py-4 text-discord-light">${formatBytes(batch.total_size)}</td>
-                    <td class="px-6 py-4"><span class="bg-discord-element px-2 py-1 rounded-[30px] text-xs border border-discord-divider">${batch.status}</span></td>
-                    <td class="px-6 py-4 text-right space-x-2">
-                        <button class="bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light border border-discord-divider px-3 py-1.5 rounded-[30px] transition-all text-xs font-bold shadow-sm" data-action="download" data-id="${batch.batch_id}"><i class="fa-solid fa-download"></i></button>
-                        <button class="bg-discord-element hover:bg-green-500 hover:text-white text-discord-light border border-discord-divider px-3 py-1.5 rounded-[30px] transition-all text-xs font-bold shadow-sm" data-action="verify" data-id="${batch.batch_id}"><i class="fa-solid fa-check"></i></button>
-                        <button class="bg-discord-element hover:bg-red-500 hover:text-white text-discord-light border border-discord-divider px-3 py-1.5 rounded-[30px] transition-all text-xs font-bold shadow-sm" data-action="delete" data-id="${batch.batch_id}"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                `;
-                table.appendChild(row);
-            });
+            try {
+                const res = await fetch('/api/batches');
+                const batches = await res.json();
+                const table = document.getElementById('batch-table');
+                table.innerHTML = '';
+                
+                if (!batches || batches.length === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    return;
+                } else {
+                    document.getElementById('empty-state').classList.add('hidden');
+                }
+
+                batches.forEach((batch) => {
+                    const row = document.createElement('tr');
+                    row.className = 'group hover:bg-discord-hover/50 transition-colors';
+                    
+                    let statusBadge = `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-discord-bg text-discord-light border border-discord-divider">${batch.status}</span>`;
+                    if(batch.status === 'complete') statusBadge = `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20">Synced</span>`;
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 font-mono text-xs text-discord-light group-hover:text-white transition-colors">
+                            <span class="opacity-70">#</span>${batch.batch_id}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-white flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-discord-element flex items-center justify-center text-discord-brand">
+                                <i class="fa-solid fa-file-zipper"></i>
+                            </div>
+                            ${batch.original_name}
+                        </td>
+                        <td class="px-6 py-4 text-discord-light font-mono text-xs">${formatBytes(batch.total_size)}</td>
+                        <td class="px-6 py-4">${statusBadge}</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-discord-brand text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Download" data-action="download" data-id="${batch.batch_id}"><i class="fa-solid fa-download"></i></button>
+                                <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-green-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Verify" data-action="verify" data-id="${batch.batch_id}"><i class="fa-solid fa-check"></i></button>
+                                <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-red-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Delete" data-action="delete" data-id="${batch.batch_id}"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                });
+            } catch (e) { console.log("Batches load error"); }
         };
 
-        document.getElementById('refresh-btn').addEventListener('click', async () => {
-            const icon = document.querySelector('#refresh-btn i');
-            if (icon) icon.classList.add('fa-spin');
-            await loadStats();
-            await loadBatches();
-            setTimeout(() => icon && icon.classList.remove('fa-spin'), 500);
+        document.addEventListener('DOMContentLoaded', () => {
+            switchView('dashboard');
+            loadStats();
+            loadBatches();
         });
 
-        const uploadToggle = document.getElementById('upload-folder-toggle');
-        const uploadInput = document.getElementById('upload-file');
-
-        const updateUploadMode = () => {
-            if (uploadToggle.checked) {
-                uploadInput.setAttribute('webkitdirectory', '');
-                uploadInput.setAttribute('multiple', '');
-            } else {
-                uploadInput.removeAttribute('webkitdirectory');
-                uploadInput.removeAttribute('multiple');
-            }
-            uploadInput.value = '';
-        };
-
-        uploadToggle.addEventListener('change', updateUploadMode);
-        updateUploadMode();
+        document.getElementById('refresh-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('refresh-btn');
+            const icon = btn.querySelector('i');
+            icon.classList.add('fa-spin');
+            await loadStats();
+            await loadBatches();
+            setTimeout(() => icon.classList.remove('fa-spin'), 500);
+        });
 
         document.getElementById('upload-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const fileInput = document.getElementById('upload-file');
             if (!fileInput.files.length) {
-                alert('Choose a file to upload.');
+                alert('Please select a file or folder to upload.');
                 return;
             }
             const formData = new FormData();
@@ -518,9 +744,12 @@
             formData.append('tags', document.getElementById('upload-tags').value);
             formData.append('description', document.getElementById('upload-description').value);
             formData.append('confirm', document.getElementById('upload-confirm').checked);
-            const res = await fetch('/api/jobs/upload', { method: 'POST', body: formData });
-            const data = await res.json();
-            startJob(data.job_id);
+            
+            try {
+                const res = await fetch('/api/jobs/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                startJob(data.job_id);
+            } catch(e) { alert("Upload failed to start."); }
         });
 
         document.getElementById('batch-table').addEventListener('click', async (event) => {
@@ -528,83 +757,66 @@
             if (!button) return;
             const action = button.dataset.action;
             const batchId = button.dataset.id;
-            if (action === 'download') {
-                const res = await fetch('/api/jobs/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ batch_id: batchId })
+            
+            if (!action) return;
+
+            try {
+                if (action === 'download') {
+                    const res = await fetch('/api/jobs/download', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batch_id: batchId })
+                    });
+                    const data = await res.json();
+                    startJob(data.job_id);
+                }
+                else if (action === 'verify') {
+                    const res = await fetch('/api/jobs/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batch_id: batchId })
+                    });
+                    const data = await res.json();
+                    startJob(data.job_id);
+                }
+                else if (action === 'delete') {
+                    if (!confirm('Are you sure you want to delete this batch locally?')) return;
+                    const deleteRemote = confirm('Should we also delete the remote Discord thread?');
+                    
+                    const res = await fetch('/api/jobs/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batch_id: batchId, delete_remote: deleteRemote })
+                    });
+                    const data = await res.json();
+                    startJob(data.job_id);
+                }
+            } catch(e) { console.error("Action failed", e); }
+        });
+
+        const bindAction = (id, endpoint, body) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', async () => {
+                    try {
+                        const res = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+                        const data = await res.json();
+                        startJob(data.job_id);
+                    } catch(e) { console.error("System action failed"); }
                 });
-                const data = await res.json();
-                startJob(data.job_id);
             }
-            if (action === 'verify') {
-                const res = await fetch('/api/jobs/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ batch_id: batchId })
-                });
-                const data = await res.json();
-                startJob(data.job_id);
-            }
-            if (action === 'delete') {
-                const confirmDelete = confirm('Delete local metadata for this batch?');
-                if (!confirmDelete) return;
-                const deleteRemote = confirm('Also delete Discord thread/card?');
-                const res = await fetch('/api/jobs/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ batch_id: batchId, delete_remote: deleteRemote })
-                });
-                const data = await res.json();
-                startJob(data.job_id);
-                await loadBatches();
-            }
-        });
+        };
 
-        document.getElementById('sync-btn').addEventListener('click', async () => {
-            const res = await fetch('/api/jobs/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reset: false })
-            });
-            const data = await res.json();
-            startJob(data.job_id);
-        });
+        bindAction('sync-btn', '/api/jobs/sync', { reset: false });
+        bindAction('sync-reset-btn', '/api/jobs/sync', { reset: true });
+        bindAction('backup-btn', '/api/jobs/backup', { upload_to_discord: false });
+        bindAction('backup-upload-btn', '/api/jobs/backup', { upload_to_discord: true });
 
-        document.getElementById('sync-reset-btn').addEventListener('click', async () => {
-            const res = await fetch('/api/jobs/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reset: true })
-            });
-            const data = await res.json();
-            startJob(data.job_id);
-        });
-
-        document.getElementById('backup-btn').addEventListener('click', async () => {
-            const res = await fetch('/api/jobs/backup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ upload_to_discord: false })
-            });
-            const data = await res.json();
-            startJob(data.job_id);
-        });
-
-        document.getElementById('backup-upload-btn').addEventListener('click', async () => {
-            const res = await fetch('/api/jobs/backup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ upload_to_discord: true })
-            });
-            const data = await res.json();
-            startJob(data.job_id);
-        });
-
-        window.addEventListener('load', async () => {
-            await loadStats();
-            await loadBatches();
-        });
+        updateUploadMode();
     </script>
 </body>
 </html>
