@@ -370,7 +370,8 @@ async def resume_upload(batch_id: str) -> str:
 
         await client.start(config.discord_bot_token)
         result = await result_future
-        send_notification("Upload complete", f"Batch {result} resumed and uploaded.")
+        send_notification("Upload complete",
+                          f"Batch {result} resumed and uploaded.")
         return result
     except Exception as exc:
         send_notification("Upload failed", f"Batch {batch_id} failed: {exc}")
