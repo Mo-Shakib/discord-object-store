@@ -305,16 +305,16 @@
 
             <section id="upload" class="view-section animate-fade-in space-y-6 max-w-4xl mx-auto">
                 <div class="bg-discord-sidebar rounded-2xl border border-discord-divider overflow-hidden shadow-card">
-                    <div class="p-8 border-b border-discord-divider">
-                        <h2 class="text-2xl font-bold text-white mb-2">Upload New Artifact</h2>
+                    <div class="p-6 border-b border-discord-divider">
+                        <h2 class="text-2xl font-bold text-white mb-1">Upload New Artifact</h2>
                         <p class="text-discord-light text-sm">Select files or folders to compress and upload to the Object Store.</p>
                     </div>
                     
                     <div class="p-8">
-                        <form id="upload-form" class="space-y-8">
+                        <form id="upload-form" class="space-y-5">
                             <div class="space-y-3">
-                                <label class="text-xs font-bold text-discord-light uppercase tracking-wide">File Selection</label>
-                                <div id="drop-area" class="drop-zone rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer min-h-[200px] relative group">
+                                <!-- <label class="text-xs font-bold text-discord-light uppercase tracking-wide">File Selection</label> -->
+                                <div id="drop-area" class="drop-zone rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px] relative group">
                                     <input id="upload-file" type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                                     
                                     <div class="w-16 h-16 bg-discord-brand/10 rounded-full flex items-center justify-center text-discord-brand mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -346,7 +346,7 @@
                                 </style>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Artifact Title</label>
                                     <div class="relative">
@@ -365,7 +365,7 @@
 
                             <div>
                                 <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Description</label>
-                                <textarea id="upload-description" rows="3" class="w-full bg-discord-element border border-discord-divider rounded-xl p-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand resize-none" placeholder="Brief summary of contents..."></textarea>
+                                <textarea id="upload-description" rows="2" class="w-full bg-discord-element border border-discord-divider rounded-xl p-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand resize-none" placeholder="Brief summary of contents..."></textarea>
                             </div>
 
                             <div class="pt-6 border-t border-discord-divider flex items-center justify-between">
