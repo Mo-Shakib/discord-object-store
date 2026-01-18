@@ -9,7 +9,7 @@
     <!-- Google Fonts: Inter (Close to Discord's gg sans) and JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,9 +28,12 @@
                             darker: '#1e1f22',    // Code blocks/Inputs
                             light: '#b5bac1',     // Subtext
                             white: '#f2f3f5',     // Main Text
-                            divider: '#111214',   // Borders
+                            divider: '#1f2023',   // Borders
                             hover: '#3f4147',     // Hover state
-                            accent: '#ffffff',    // High contrast accent (B&W request)
+                            blurple: '#5865F2',   // Brand Color
+                            green: '#23a559',
+                            yellow: '#f0b232',
+                            red: '#f23f42'
                         }
                     },
                     fontFamily: {
@@ -39,11 +42,18 @@
                     },
                     animation: {
                         'float': 'float 6s ease-in-out infinite',
+                        'blob': 'blob 7s infinite',
                     },
                     keyframes: {
                         float: {
                             '0%, 100%': { transform: 'translateY(0)' },
                             '50%': { transform: 'translateY(-10px)' },
+                        },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
                         }
                     }
                 }
@@ -79,10 +89,17 @@
 
         /* Gradient Text */
         .text-gradient {
-            background: linear-gradient(to right, #ffffff, #9ca3af);
+            background: linear-gradient(to right, #5865F2, #9ca3af);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        /* Feature Card Glow */
+        .feature-card:hover {
+            box-shadow: 0 0 20px rgba(88, 101, 242, 0.15);
+            border-color: rgba(88, 101, 242, 0.5);
+            transform: translateY(-2px);
         }
 
         /* Code Block Styling */
@@ -97,7 +114,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.02);
             pointer-events: none;
         }
 
@@ -110,11 +127,11 @@
         .terminal-cursor {
             display: inline-block;
             width: 8px;
-            height: 1em;
+            height: 1.2em;
             margin-left: 4px;
-            background: #f2f3f5;
+            background: #b5bac1;
             animation: blink 1s step-end infinite;
-            vertical-align: -2px;
+            vertical-align: middle;
         }
         @keyframes terminal-reveal {
             0%, 12% { opacity: 0; transform: translateY(6px); }
@@ -124,28 +141,34 @@
             0%, 49% { opacity: 1; }
             50%, 100% { opacity: 0; }
         }
+        
+        /* Syntax Highlighting Fake Classes */
+        .syntax-cmd { color: #5865F2; font-weight: bold; } /* Blue for command */
+        .syntax-arg { color: #f0b232; } /* Yellow for arguments */
+        .syntax-path { color: #23a559; } /* Green for paths */
+        .syntax-comment { color: #6d7178; font-style: italic; }
+        .syntax-prompt { color: #eb459e; }
     </style>
 </head>
-<body class="bg-discord-bg text-discord-white font-sans antialiased selection:bg-white selection:text-black overflow-x-hidden">
+<body class="bg-discord-bg text-discord-white font-sans antialiased selection:bg-discord-blurple selection:text-white overflow-x-hidden">
 
     <!-- Navbar -->
-    <nav class="fixed top-0 w-full z-50 bg-discord-bg/80 backdrop-blur-md border-b border-discord-divider transition-all duration-300" id="navbar">
+    <nav class="fixed top-0 w-full z-50 bg-discord-bg/80 backdrop-blur-xl border-b border-discord-divider transition-all duration-300" id="navbar">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center gap-3">
-                    <i class="fa-brands fa-discord text-2xl text-white"></i>
-                    <span class="font-bold text-xl tracking-tight">Object Store</span>
-                </div>
+                <a href="#" class="flex-shrink-0 flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <i class="fa-solid fa-cubes text-3xl text-discord-blurple"></i>
+                    <span class="font-extrabold text-xl tracking-tight text-white">Object Store</span>
+                </a>
                 
                 <!-- Desktop Menu -->
                 <div class="hidden md:block">
-                    <div class="ml-10 flex items-baseline space-x-8">
-                        <a href="#features" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">Features</a>
-                        <a href="#how-it-works" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">How it Works</a>
-                        <a href="#setup" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">Setup</a>
-                        <a href="#commands" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors">Commands</a>
-                        <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-full text-sm font-bold transition-all transform hover:scale-105">
+                    <div class="ml-10 flex items-baseline space-x-6">
+                        <a href="#features" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-discord-dark/50">Features</a>
+                        <a href="#how-it-works" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-discord-dark/50">How it Works</a>
+                        <a href="#setup" class="hover:text-white text-discord-light px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-discord-dark/50">Setup</a>
+                        <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="bg-discord-blurple hover:bg-indigo-500 text-white px-5 py-2 rounded-full text-sm font-bold transition-all transform hover:scale-105 shadow-lg shadow-discord-blurple/20">
                             <i class="fa-brands fa-github mr-2"></i>GitHub
                         </a>
                     </div>
@@ -161,13 +184,12 @@
         </div>
 
         <!-- Mobile Menu -->
-        <div class="hidden md:hidden bg-discord-dark border-b border-discord-divider" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <a href="#features" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">Features</a>
-                <a href="#how-it-works" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">How it Works</a>
-                <a href="#setup" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">Setup</a>
-                <a href="#commands" class="text-discord-light hover:text-white block px-3 py-2 rounded-md text-base font-medium">Commands</a>
-                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="text-white bg-discord-darker block px-3 py-2 rounded-md text-base font-bold mt-4 border border-discord-divider">
+        <div class="hidden md:hidden bg-discord-dark border-b border-discord-divider absolute w-full" id="mobile-menu">
+            <div class="px-4 pt-2 pb-6 space-y-2">
+                <a href="#features" class="text-discord-light hover:text-white block px-3 py-3 rounded-md text-base font-medium hover:bg-discord-hover">Features</a>
+                <a href="#how-it-works" class="text-discord-light hover:text-white block px-3 py-3 rounded-md text-base font-medium hover:bg-discord-hover">How it Works</a>
+                <a href="#setup" class="text-discord-light hover:text-white block px-3 py-3 rounded-md text-base font-medium hover:bg-discord-hover">Setup</a>
+                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="text-white bg-discord-blurple block px-3 py-3 rounded-md text-base font-bold mt-4 text-center">
                     <i class="fa-brands fa-github mr-2"></i> View on GitHub
                 </a>
             </div>
@@ -176,65 +198,93 @@
 
     <!-- Hero Section -->
     <header class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <div class="absolute inset-0 z-0">
-            <!-- Subtle grid pattern -->
-            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-20 mask-image:linear-gradient(to_bottom,black,transparent)"></div>
+        <!-- Background Blobs -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-discord-blurple/20 rounded-full mix-blend-screen filter blur-[80px] opacity-30 animate-blob"></div>
+            <div class="absolute top-48 -right-24 w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-[80px] opacity-30 animate-blob" style="animation-delay: 2s"></div>
+            <div class="absolute -bottom-32 left-1/3 w-96 h-96 bg-pink-500/20 rounded-full mix-blend-screen filter blur-[80px] opacity-30 animate-blob" style="animation-delay: 4s"></div>
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <div class="inline-flex items-center px-4 py-2 rounded-full border border-discord-light/20 bg-discord-dark/50 backdrop-blur-sm mb-8 reveal">
-                <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
-                <span class="text-sm font-mono text-discord-light">v4.0.0 Latest Release</span>
-            </div>
+            <a href="https://github.com/Mo-Shakib/discord-object-store/releases" target="_blank" class="inline-flex items-center px-4 py-1.5 rounded-full border border-discord-light/20 bg-discord-dark/50 backdrop-blur-sm mb-8 reveal hover:border-discord-blurple/50 hover:bg-discord-dark/80 transition-all group cursor-pointer">
+                <span class="flex h-2 w-2 relative mr-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span class="text-xs font-mono text-discord-light group-hover:text-white transition-colors">v4.0.0 is now available</span>
+                <i class="fa-solid fa-chevron-right ml-2 text-[10px] text-discord-light group-hover:translate-x-1 transition-transform"></i>
+            </a>
 
-            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 reveal" style="transition-delay: 100ms;">
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 reveal drop-shadow-2xl" style="transition-delay: 100ms;">
                 Unlimited Storage on <br />
                 <span class="text-gradient">Discord Channels</span>
             </h1>
 
-                <p class="mt-4 max-w-2xl mx-auto text-xl text-discord-light reveal" style="transition-delay: 200ms;">
-                Turn Discord into secure, distributed file storage with compression, encryption,
-                chunked uploads, and a local metadata database plus a live Web UI.
+                <p class="mt-6 max-w-2xl mx-auto text-xl text-discord-light reveal leading-relaxed" style="transition-delay: 200ms;">
+                Turn your Discord server into a secure, distributed file system. 
+                Featuring chunked uploads, military-grade encryption, and a beautiful Web UI.
             </p>
 
             <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4 px-4 sm:px-0 reveal" style="transition-delay: 300ms;">
-                <a href="#setup" class="w-full sm:w-auto text-center px-8 py-3 rounded-full bg-white text-black font-bold text-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-lg shadow-white/10">
+                <a href="#setup" class="w-full sm:w-auto text-center px-8 py-4 rounded-full bg-discord-blurple text-white font-bold text-lg hover:bg-indigo-500 transition-all transform hover:scale-105 shadow-xl shadow-discord-blurple/20">
                     Get Started
                 </a>
-                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="w-full sm:w-auto text-center px-8 py-3 rounded-full bg-discord-darker border border-discord-divider text-white font-bold text-lg hover:bg-discord-hover transition-all group">
+                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="w-full sm:w-auto text-center px-8 py-4 rounded-full bg-discord-darker border border-discord-divider text-white font-bold text-lg hover:bg-discord-hover hover:border-discord-light/30 transition-all group">
                     <i class="fa-regular fa-star mr-2 group-hover:text-yellow-400 transition-colors"></i> Star on GitHub
                 </a>
             </div>
 
-            <!-- Floating Card Graphic -->
-            <div class="mt-16 mx-auto max-w-4xl bg-discord-dark rounded-xl border border-discord-divider shadow-2xl p-6 animate-float reveal" style="transition-delay: 400ms;">
-                <div class="flex items-center gap-2 mb-4 border-b border-discord-divider pb-4">
-                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span class="ml-4 text-xs text-discord-light font-mono">terminal — discord-object-store</span>
+            <!-- Floating Terminal -->
+            <div class="mt-20 mx-auto max-w-3xl bg-[#1e1e1e] rounded-xl border border-discord-divider shadow-2xl overflow-hidden animate-float reveal text-left" style="transition-delay: 400ms;">
+                <!-- Terminal Header -->
+                <div class="flex items-center px-4 py-3 bg-[#252526] border-b border-black/20">
+                    <div class="flex gap-2">
+                        <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                    </div>
+                    <div class="flex-1 text-center">
+                        <span class="text-xs text-gray-400 font-mono flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-folder-open"></i> user@local: ~/projects/store
+                        </span>
+                    </div>
                 </div>
-                <div class="font-mono text-left text-sm md:text-base space-y-2">
+                
+                <!-- Terminal Body -->
+                <div class="p-6 font-mono text-sm md:text-base leading-relaxed bg-[#1e1e1e]/90 backdrop-blur-sm min-h-[300px]">
+                    
                     <div class="terminal-line" style="animation-delay: 0s;">
-                        <span class="text-gray-500">$</span> python bot.py upload ./backups/photos<span class="terminal-cursor"></span>
+                        <span class="syntax-prompt">➜</span> <span class="text-cyan-400">~/store</span> <span class="syntax-cmd">python</span> bot.py upload <span class="syntax-path">./backups/photos</span>
                     </div>
-                    <div class="terminal-line" style="animation-delay: 0.9s;">
-                        <span class="text-purple-400">[scan]</span> 312 files, 1.8GB
+                    
+                    <div class="terminal-line" style="animation-delay: 0.8s;">
+                        <span class="text-gray-500">[10:42:01]</span> <span class="text-purple-400 font-bold">[SCAN]</span> Found 312 files, total 1.8GB
                     </div>
-                    <div class="terminal-line" style="animation-delay: 1.8s;">
-                        <span class="text-yellow-400">[pack]</span> archive.tar.gz created (45% smaller)
+
+                    <div class="terminal-line" style="animation-delay: 1.6s;">
+                        <span class="text-gray-500">[10:42:03]</span> <span class="text-yellow-400 font-bold">[PACK]</span> Created archive.tar.gz <span class="text-gray-500">(Comp level 9)</span>
                     </div>
-                    <div class="terminal-line" style="animation-delay: 2.7s;">
-                        <span class="text-blue-400">[encrypt]</span> PBKDF2 + AES-256
+
+                    <div class="terminal-line" style="animation-delay: 2.4s;">
+                        <span class="text-gray-500">[10:42:05]</span> <span class="text-blue-400 font-bold">[CRYPT]</span> Encrypting with AES-256 + PBKDF2...
                     </div>
-                    <div class="terminal-line" style="animation-delay: 3.6s;">
-                        <span class="text-purple-400">[split]</span> 190 chunks @ 9.5MB
+
+                    <div class="terminal-line" style="animation-delay: 3.2s;">
+                        <div class="mt-2 mb-2 w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-full w-2/3"></div>
+                        </div>
                     </div>
-                    <div class="terminal-line" style="animation-delay: 4.5s;">
-                        <span class="text-blue-400">[upload]</span> Thread created: batch #20260118-01
+
+                    <div class="terminal-line" style="animation-delay: 4.0s;">
+                        <span class="text-gray-500">[10:42:15]</span> <span class="text-green-500 font-bold">[UPLOAD]</span> Batch #20260119-01 active in thread.
                     </div>
-                    <div class="terminal-line" style="animation-delay: 5.4s;">
-                        <span class="text-green-500">[done]</span> Metadata saved to SQLite (WAL)
+                    
+                    <div class="terminal-line" style="animation-delay: 4.8s;">
+                        <span class="text-gray-500">[10:42:16]</span> <span class="text-discord-light">Metadata synced to SQLite (WAL mode)</span>
+                    </div>
+
+                    <div class="terminal-line" style="animation-delay: 5.6s;">
+                        <span class="syntax-prompt">➜</span> <span class="text-cyan-400">~/store</span> <span class="terminal-cursor"></span>
                     </div>
                 </div>
             </div>
@@ -242,75 +292,66 @@
     </header>
 
     <!-- Features Grid -->
-    <section id="features" class="py-24 bg-discord-dark border-y border-discord-divider">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" class="py-24 bg-discord-dark border-y border-discord-divider relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="text-center mb-16 reveal">
-                <h2 class="text-3xl font-bold text-white mb-4">Core Capabilities</h2>
-                <p class="text-discord-light max-w-2xl mx-auto">Everything you need to turn Discord into a secure, searchable object store.</p>
+                <h2 class="text-3xl font-extrabold text-white mb-4">Core Capabilities</h2>
+                <p class="text-discord-light max-w-2xl mx-auto text-lg">Everything you need to turn a standard channel into a powerhouse database.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Feature 1 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-layer-group text-white text-xl"></i>
+                <div class="feature-card p-8 bg-discord-bg rounded-2xl border border-discord-divider transition-all duration-300 group reveal">
+                    <div class="w-14 h-14 bg-discord-darker rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-discord-blurple/20 transition-all">
+                        <i class="fa-solid fa-layer-group text-discord-blurple text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Chunked Uploads</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">Archives are split into 9.5MB chunks to respect Discord limits, with resumable uploads for large data.</p>
+                    <h3 class="text-xl font-bold mb-3 text-white">Smart Chunking</h3>
+                    <p class="text-discord-light leading-relaxed">Files are automatically split into 24MB chunks to bypass Discord's file size limits while maintaining file integrity.</p>
                 </div>
 
                 <!-- Feature 2 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-lock text-white text-xl"></i>
+                <div class="feature-card p-8 bg-discord-bg rounded-2xl border border-discord-divider transition-all duration-300 group reveal">
+                    <div class="w-14 h-14 bg-discord-darker rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-green-500/20 transition-all">
+                        <i class="fa-solid fa-lock text-green-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Strong Encryption</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">PBKDF2-derived keys with per-batch salts and AES-256 (Fernet) encryption keep data private.</p>
+                    <h3 class="text-xl font-bold mb-3 text-white">Zero-Knowledge Auth</h3>
+                    <p class="text-discord-light leading-relaxed">Your data is encrypted locally before upload using AES-256-GCM. Discord servers only see random noise.</p>
                 </div>
 
                 <!-- Feature 3 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-file-zipper text-white text-xl"></i>
+                <div class="feature-card p-8 bg-discord-bg rounded-2xl border border-discord-divider transition-all duration-300 group reveal">
+                    <div class="w-14 h-14 bg-discord-darker rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-yellow-500/20 transition-all">
+                        <i class="fa-solid fa-file-zipper text-yellow-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Compression First</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">Files are bundled into a .tar.gz archive before encryption to maximize storage efficiency.</p>
+                    <h3 class="text-xl font-bold mb-3 text-white">Compression</h3>
+                    <p class="text-discord-light leading-relaxed">Automatic Gzip compression (Level 9) maximizes your storage efficiency before the encryption step.</p>
                 </div>
 
                 <!-- Feature 4 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-rotate-right text-white text-xl"></i>
+                <div class="feature-card p-8 bg-discord-bg rounded-2xl border border-discord-divider transition-all duration-300 group reveal">
+                    <div class="w-14 h-14 bg-discord-darker rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-pink-500/20 transition-all">
+                        <i class="fa-solid fa-rotate-right text-pink-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Resumable Transfers</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">Resume stalled uploads with <code>resume</code> and verify integrity with SHA-256.</p>
+                    <h3 class="text-xl font-bold mb-3 text-white">Resumable Uploads</h3>
+                    <p class="text-discord-light leading-relaxed">Network failure? No problem. The bot tracks chunk status and resumes exactly where it left off.</p>
                 </div>
 
                 <!-- Feature 5 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-magnifying-glass text-white text-xl"></i>
+                <div class="feature-card p-8 bg-discord-bg rounded-2xl border border-discord-divider transition-all duration-300 group reveal">
+                    <div class="w-14 h-14 bg-discord-darker rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-cyan-500/20 transition-all">
+                        <i class="fa-solid fa-database text-cyan-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Metadata & Search</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">SQLite with WAL and indexes for fast batch search, detailed stats, and sync from Discord.</p>
+                    <h3 class="text-xl font-bold mb-3 text-white">Local Database</h3>
+                    <p class="text-discord-light leading-relaxed">A lightning-fast SQLite layer manages metadata, allowing instant search without API rate limits.</p>
                 </div>
 
                 <!-- Feature 6 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-brands fa-python text-white text-xl"></i>
+                <div class="feature-card p-8 bg-discord-bg rounded-2xl border border-discord-divider transition-all duration-300 group reveal">
+                    <div class="w-14 h-14 bg-discord-darker rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all">
+                        <i class="fa-solid fa-desktop text-purple-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Friendly CLI</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">Simple CLI for uploads, downloads, listing, info, and stats—built for non-technical users.</p>
-                </div>
-
-                <!-- Feature 7 -->
-                <div class="p-6 bg-discord-bg rounded-xl border border-discord-divider hover:border-discord-light/30 transition-all group reveal">
-                    <div class="w-12 h-12 bg-discord-darker rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-desktop text-white text-xl"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2">Web UI Dashboard</h3>
-                    <p class="text-discord-light text-sm leading-relaxed">FastAPI-powered Web UI with live job status, uploads, batch browsing, and system actions.</p>
+                    <h3 class="text-xl font-bold mb-3 text-white">Modern Dashboard</h3>
+                    <p class="text-discord-light leading-relaxed">Includes a FastAPI-powered Web UI to manage jobs, view storage stats, and browse your file index.</p>
                 </div>
             </div>
         </div>
@@ -319,24 +360,24 @@
     <!-- How It Works Section -->
     <section id="how-it-works" class="py-24 bg-discord-bg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="mb-16 reveal">
+            <div class="mb-20 text-center reveal">
                 <h2 class="text-3xl font-bold text-white mb-4">The Workflow</h2>
-                <div class="h-1 w-20 bg-white rounded"></div>
+                <p class="text-discord-light">From local folder to distributed cloud in three steps.</p>
             </div>
 
             <div class="relative">
                 <!-- Vertical Line for Desktop -->
-                <div class="hidden lg:block absolute left-1/2 transform -translate-x-1/2 h-full w-px bg-discord-darker border-l border-dashed border-discord-light/30"></div>
+                <div class="hidden lg:block absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-gradient-to-b from-transparent via-discord-divider to-transparent"></div>
 
                 <!-- Step 1 -->
-                <div class="relative flex flex-col-reverse lg:flex-row items-center mb-16 reveal">
-                    <div class="flex-1 text-center lg:text-right lg:pr-12 mt-4 lg:mt-0 lg:mb-0">
-                        <h3 class="text-2xl font-bold text-white">Package & Encrypt</h3>
-                        <p class="text-discord-light mt-2">The CLI bundles your files into a <code>.tar.gz</code>, encrypts with PBKDF2-derived keys, then splits into upload chunks.</p>
+                <div class="relative flex flex-col-reverse lg:flex-row items-center mb-24 reveal group">
+                    <div class="flex-1 text-center lg:text-right lg:pr-16 mt-6 lg:mt-0">
+                        <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-discord-blurple transition-colors">1. Package & Encrypt</h3>
+                        <p class="text-discord-light text-lg">The CLI bundles your files into a <code>.tar.gz</code>, encrypts with PBKDF2-derived keys, then splits into upload chunks.</p>
                     </div>
-                    <div class="w-12 h-12 rounded-full bg-discord-white text-discord-bg flex items-center justify-center font-bold z-10 shadow-[0_0_15px_rgba(255,255,255,0.3)]">1</div>
-                    <div class="flex-1 lg:pl-12 hidden lg:block">
-                        <div class="bg-discord-darker p-4 rounded-lg border border-discord-divider font-mono text-xs text-gray-400">
+                    <div class="w-16 h-16 rounded-full bg-discord-darker border-4 border-discord-bg shadow-xl flex items-center justify-center font-bold text-xl z-10 text-discord-light group-hover:border-discord-blurple group-hover:text-white transition-all">1</div>
+                    <div class="flex-1 lg:pl-16 hidden lg:block">
+                        <div class="bg-discord-darker p-5 rounded-xl border border-discord-divider font-mono text-xs text-gray-400 shadow-lg transform group-hover:translate-x-2 transition-transform">
                             > Scanning folder...<br>
                             > Creating archive.tar.gz...<br>
                             > Encrypting and splitting...
@@ -345,30 +386,30 @@
                 </div>
 
                 <!-- Step 2 -->
-                <div class="relative flex flex-col lg:flex-row items-center mb-16 reveal">
-                    <div class="flex-1 lg:pr-12 hidden lg:block text-right">
-                        <div class="bg-discord-darker p-4 rounded-lg border border-discord-divider font-mono text-xs text-gray-400">
+                <div class="relative flex flex-col lg:flex-row items-center mb-24 reveal group">
+                    <div class="flex-1 lg:pr-16 hidden lg:block text-right">
+                        <div class="bg-discord-darker p-5 rounded-xl border border-discord-divider font-mono text-xs text-gray-400 shadow-lg transform group-hover:-translate-x-2 transition-transform">
                             $ python bot.py upload ./data<br>
                             [Bot] Creating batch card...<br>
                             [Bot] Uploading 190 chunks...
                         </div>
                     </div>
-                    <div class="w-12 h-12 rounded-full bg-discord-darker border-2 border-discord-white text-white flex items-center justify-center font-bold z-10">2</div>
-                    <div class="flex-1 text-center lg:text-left lg:pl-12 mt-4 lg:mt-0">
-                        <h3 class="text-2xl font-bold text-white">Upload to Discord</h3>
-                        <p class="text-discord-light mt-2">Use <code>python bot.py upload</code>. The bot posts a batch card, creates a thread, and uploads chunks concurrently.</p>
+                    <div class="w-16 h-16 rounded-full bg-discord-darker border-4 border-discord-bg shadow-xl flex items-center justify-center font-bold text-xl z-10 text-discord-light group-hover:border-green-500 group-hover:text-white transition-all">2</div>
+                    <div class="flex-1 text-center lg:text-left lg:pl-16 mt-6 lg:mt-0">
+                        <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-green-500 transition-colors">2. Sync to Discord</h3>
+                        <p class="text-discord-light text-lg">The bot posts a metadata "Card", creates a private thread, and uploads chunks concurrently to maximize bandwidth.</p>
                     </div>
                 </div>
 
                 <!-- Step 3 -->
-                <div class="relative flex flex-col-reverse lg:flex-row items-center mb-16 reveal">
-                    <div class="flex-1 text-center lg:text-right lg:pr-12 mt-4 lg:mt-0 lg:mb-0">
-                        <h3 class="text-2xl font-bold text-white">Download & Restore</h3>
-                        <p class="text-discord-light mt-2">Use <code>python bot.py download &lt;batch_id&gt;</code>. Chunks are verified, merged, decrypted, and extracted.</p>
+                <div class="relative flex flex-col-reverse lg:flex-row items-center reveal group">
+                    <div class="flex-1 text-center lg:text-right lg:pr-16 mt-6 lg:mt-0">
+                        <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-purple-500 transition-colors">3. Restore Anywhere</h3>
+                        <p class="text-discord-light text-lg">Download on any machine with the key. Chunks are verified via SHA-256, merged, decrypted, and extracted.</p>
                     </div>
-                    <div class="w-12 h-12 rounded-full bg-discord-darker border-2 border-discord-white text-white flex items-center justify-center font-bold z-10">3</div>
-                    <div class="flex-1 lg:pl-12 hidden lg:block">
-                         <div class="bg-discord-darker p-4 rounded-lg border border-discord-divider font-mono text-xs text-gray-400">
+                    <div class="w-16 h-16 rounded-full bg-discord-darker border-4 border-discord-bg shadow-xl flex items-center justify-center font-bold text-xl z-10 text-discord-light group-hover:border-purple-500 group-hover:text-white transition-all">3</div>
+                    <div class="flex-1 lg:pl-16 hidden lg:block">
+                         <div class="bg-discord-darker p-5 rounded-xl border border-discord-divider font-mono text-xs text-gray-400 shadow-lg transform group-hover:translate-x-2 transition-transform">
                             > Verifying hashes... OK<br>
                             > Decrypting archive... OK<br>
                             > Extracted: ./data
@@ -382,30 +423,51 @@
     <!-- Setup Section -->
     <section id="setup" class="py-24 bg-discord-dark border-t border-discord-divider">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-white mb-8 reveal">Installation & Configuration</h2>
+            <h2 class="text-3xl font-bold text-white mb-12 reveal text-center">Get Running in 30 Seconds</h2>
 
             <div class="space-y-8">
                 <!-- Step 1 Code -->
                 <div class="reveal">
-                    <h3 class="text-lg font-semibold text-discord-white mb-3"><i class="fa-solid fa-terminal mr-2"></i>1. Create Virtual Env & Install</h3>
-                    <div class="code-block bg-discord-darker rounded-lg border border-discord-divider p-4 font-mono text-sm text-gray-300">
-                        <button onclick="copyToClipboard(this)" class="absolute top-3 right-3 text-xs bg-discord-bg border border-discord-divider px-2 py-1 rounded hover:bg-discord-light/20 transition-colors">Copy</button>
-                        <pre><code>git clone https://github.com/Mo-Shakib/discord-object-store.git
+                    <h3 class="text-lg font-semibold text-discord-white mb-3 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-discord-blurple/20 text-discord-blurple flex items-center justify-center text-xs">1</span>
+                        Clone & Install
+                    </h3>
+                    <div class="code-block bg-[#1e1e1e] rounded-lg border border-discord-divider p-4 shadow-lg group">
+                        <button onclick="copyToClipboard(this)" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-discord-bg border border-discord-divider px-3 py-1.5 rounded hover:bg-discord-blurple hover:text-white hover:border-discord-blurple text-discord-light">Copy</button>
+                        <pre class="font-mono text-sm text-gray-300 overflow-x-auto"><code>git clone https://github.com/Mo-Shakib/discord-object-store.git
 cd discord-object-store
 python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+source .venv/bin/activate
 pip install -r requirements.txt</code></pre>
                     </div>
                 </div>
 
                 <!-- Step 2 Env -->
                 <div class="reveal">
-                    <h3 class="text-lg font-semibold text-discord-white mb-3"><i class="fa-solid fa-gear mr-2"></i>2. Run Setup Wizard</h3>
-                    <p class="text-discord-light text-sm mb-2">Let the wizard save your token, generate keys, and configure channels.</p>
-                    <div class="code-block bg-discord-darker rounded-lg border border-discord-divider p-4 font-mono text-sm text-gray-300">
-                        <button onclick="copyToClipboard(this)" class="absolute top-3 right-3 text-xs bg-discord-bg border border-discord-divider px-2 py-1 rounded hover:bg-discord-light/20 transition-colors">Copy</button>
-                        <pre><code>python setup.py</code></pre>
+                    <h3 class="text-lg font-semibold text-discord-white mb-3 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-discord-blurple/20 text-discord-blurple flex items-center justify-center text-xs">2</span>
+                        Configure
+                    </h3>
+                    <div class="code-block bg-[#1e1e1e] rounded-lg border border-discord-divider p-4 shadow-lg group">
+                        <button onclick="copyToClipboard(this)" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-discord-bg border border-discord-divider px-3 py-1.5 rounded hover:bg-discord-blurple hover:text-white hover:border-discord-blurple text-discord-light">Copy</button>
+                        <pre class="font-mono text-sm text-gray-300 overflow-x-auto"><code>python setup.py</code></pre>
                     </div>
+                    <p class="text-discord-light text-sm mt-2 ml-1">Follow the wizard to set your Discord Token and encryption key.</p>
+                </div>
+
+                <!-- Step 3 Web UI -->
+                <div class="reveal">
+                    <h3 class="text-lg font-semibold text-discord-white mb-3 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-discord-blurple/20 text-discord-blurple flex items-center justify-center text-xs">3</span>
+                        Launch UI
+                    </h3>
+                    <div class="code-block bg-[#1e1e1e] rounded-lg border border-discord-divider p-4 shadow-lg group">
+                        <button onclick="copyToClipboard(this)" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-discord-bg border border-discord-divider px-3 py-1.5 rounded hover:bg-discord-blurple hover:text-white hover:border-discord-blurple text-discord-light">Copy</button>
+                        <pre class="font-mono text-sm text-gray-300 overflow-x-auto"><code>uvicorn src.api:app --reload</code></pre>
+                    </div>
+                    <p class="text-discord-light text-sm mt-3 ml-1">
+                        Open <a href="http://localhost:8000" target="_blank" class="text-discord-blurple hover:underline hover:text-indigo-400">http://localhost:8000</a> after the server starts.
+                    </p>
                 </div>
             </div>
         </div>
@@ -414,43 +476,36 @@ pip install -r requirements.txt</code></pre>
     <!-- Commands Table -->
     <section id="commands" class="py-24 bg-discord-bg">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-white mb-10 text-center reveal">CLI Commands</h2>
+            <h2 class="text-3xl font-bold text-white mb-10 text-center reveal">CLI Reference</h2>
             
-            <div class="overflow-x-auto rounded-xl border border-discord-divider reveal">
-                <div class="px-4 py-3 bg-discord-dark border-b border-discord-divider text-discord-light text-sm">
-                    All commands run in the CLI. This version has no Discord chat commands.
-                </div>
+            <div class="overflow-hidden rounded-xl border border-discord-divider shadow-2xl reveal">
                 <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-discord-dark border-b border-discord-divider text-discord-light text-xs uppercase tracking-wider">
-                            <th class="p-4 font-semibold">Command</th>
-                            <th class="p-4 font-semibold">Description</th>
+                    <thead class="bg-discord-dark">
+                        <tr>
+                            <th class="p-5 font-semibold text-discord-light text-xs uppercase tracking-wider border-b border-discord-divider">Command</th>
+                            <th class="p-5 font-semibold text-discord-light text-xs uppercase tracking-wider border-b border-discord-divider">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-discord-divider bg-discord-dark/50">
+                    <tbody class="bg-discord-dark/40 divide-y divide-discord-divider">
                         <tr class="hover:bg-discord-dark/80 transition-colors">
-                            <td class="p-4 font-mono text-white whitespace-normal sm:whitespace-nowrap"><span class="bg-discord-darker px-2 py-1 rounded text-purple-300 break-all">python bot.py upload &lt;path&gt;</span></td>
-                            <td class="p-4 text-discord-light text-sm">Upload a file or folder, create a batch card, and store chunks in a thread.</td>
+                            <td class="p-4 font-mono text-white whitespace-nowrap"><span class="text-discord-blurple">upload</span> &lt;path&gt;</td>
+                            <td class="p-4 text-discord-light text-sm">Packages, encrypts, and uploads target to Discord.</td>
                         </tr>
                         <tr class="hover:bg-discord-dark/80 transition-colors">
-                            <td class="p-4 font-mono text-white whitespace-normal sm:whitespace-nowrap"><span class="bg-discord-darker px-2 py-1 rounded text-purple-300 break-all">python bot.py download &lt;batch_id&gt;</span></td>
-                            <td class="p-4 text-discord-light text-sm">Download and reconstruct a batch to a local path.</td>
+                            <td class="p-4 font-mono text-white whitespace-nowrap"><span class="text-discord-blurple">download</span> &lt;id&gt;</td>
+                            <td class="p-4 text-discord-light text-sm">Fetches and reconstructs a batch by ID.</td>
                         </tr>
                         <tr class="hover:bg-discord-dark/80 transition-colors">
-                            <td class="p-4 font-mono text-white whitespace-normal sm:whitespace-nowrap"><span class="bg-discord-darker px-2 py-1 rounded text-purple-300 break-all">python bot.py resume &lt;batch_id&gt;</span></td>
-                            <td class="p-4 text-discord-light text-sm">Resume an interrupted upload.</td>
+                            <td class="p-4 font-mono text-white whitespace-nowrap"><span class="text-discord-blurple">resume</span> &lt;id&gt;</td>
+                            <td class="p-4 text-discord-light text-sm">Continues an interrupted upload from the last chunk.</td>
                         </tr>
                         <tr class="hover:bg-discord-dark/80 transition-colors">
-                            <td class="p-4 font-mono text-white whitespace-normal sm:whitespace-nowrap"><span class="bg-discord-darker px-2 py-1 rounded text-purple-300 break-all">python bot.py stats</span></td>
-                            <td class="p-4 text-discord-light text-sm">Show storage statistics and recent batch info.</td>
+                            <td class="p-4 font-mono text-white whitespace-nowrap"><span class="text-discord-blurple">list</span></td>
+                            <td class="p-4 text-discord-light text-sm">Displays all indexed batches from local SQLite.</td>
                         </tr>
                         <tr class="hover:bg-discord-dark/80 transition-colors">
-                            <td class="p-4 font-mono text-white whitespace-normal sm:whitespace-nowrap"><span class="bg-discord-darker px-2 py-1 rounded text-purple-300 break-all">python bot.py list</span></td>
-                            <td class="p-4 text-discord-light text-sm">List batches with metadata from the local database.</td>
-                        </tr>
-                        <tr class="hover:bg-discord-dark/80 transition-colors">
-                            <td class="p-4 font-mono text-white whitespace-normal sm:whitespace-nowrap"><span class="bg-discord-darker px-2 py-1 rounded text-purple-300 break-all">python bot.py verify &lt;batch_id&gt;</span></td>
-                            <td class="p-4 text-discord-light text-sm">Verify integrity with SHA-256 and report missing chunks.</td>
+                            <td class="p-4 font-mono text-white whitespace-nowrap"><span class="text-discord-blurple">stats</span></td>
+                            <td class="p-4 text-discord-light text-sm">Storage metrics, cache size, and API latency.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -461,30 +516,35 @@ pip install -r requirements.txt</code></pre>
     <!-- Change Log Section -->
     <section id="changelog" class="py-24 bg-discord-dark border-t border-discord-divider">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-white mb-10 text-center reveal">Change Log</h2>
+            <h2 class="text-3xl font-bold text-white mb-12 text-center reveal">Change Log</h2>
             
-            <div class="relative border-l-2 border-discord-light/20 ml-3 space-y-12 reveal">
+            <div class="relative border-l-2 border-discord-divider ml-3 space-y-12 reveal">
                 <!-- v4.0.0 -->
                 <div class="relative pl-8">
-                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-green-500 ring-4 ring-discord-dark"></span>
-                    <h3 class="text-xl font-bold text-white mb-2">v4.0.0 <span class="text-sm font-normal text-discord-light ml-2 bg-discord-darker px-2 py-0.5 rounded border border-discord-divider">Latest</span></h3>
-                    <p class="text-discord-light text-sm mb-4">Discord-style Web UI with live jobs, uploads, and batch management.</p>
+                    <span class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-green-500 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-3">
+                        <a href="https://github.com/Mo-Shakib/discord-object-store/releases/tag/v.4.0.0" target="_blank" class="hover:text-discord-blurple transition-colors">
+                            v4.0.0 
+                        </a>
+                        <span class="text-xs font-bold text-white bg-discord-blurple px-2 py-0.5 rounded shadow-lg shadow-discord-blurple/20">Latest</span>
+                    </h3>
+                    <p class="text-discord-light text-sm mb-5">Discord-style Web UI with live jobs, uploads, and batch management.</p>
                     
-                    <div class="bg-discord-bg rounded-lg border border-discord-divider p-6">
-                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-desktop text-green-400"></i> v4 Highlights
+                    <div class="bg-discord-bg rounded-lg border border-discord-divider p-6 hover:border-discord-light/30 transition-colors">
+                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <i class="fa-solid fa-desktop text-discord-blurple"></i> v4 Highlights
                         </h4>
                         <ul class="space-y-3 text-sm text-discord-light">
-                            <li class="flex items-start gap-2">
-                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check mt-1 text-xs text-green-500"></i>
                                 <span><strong>Web UI:</strong> New dashboard with live job runner, stats, and uploads.</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check mt-1 text-xs text-green-500"></i>
                                 <span><strong>Batch Explorer:</strong> Searchable table with hover actions and metadata.</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check mt-1 text-xs text-green-500"></i>
                                 <span><strong>System Actions:</strong> One-click sync, backup, and reset workflows.</span>
                             </li>
                         </ul>
@@ -493,33 +553,33 @@ pip install -r requirements.txt</code></pre>
 
                 <!-- v3.0.0 -->
                 <div class="relative pl-8">
-                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-discord-light/50 ring-4 ring-discord-dark"></span>
-                    <h3 class="text-xl font-bold text-white mb-2">v3.0.0</h3>
-                    <p class="text-discord-light text-sm mb-4">New storage workflow with CLI commands, SQLite metadata, and faster sync.</p>
+                    <span class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-discord-darker border-2 border-discord-light/50 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2">
+                        <a href="https://github.com/Mo-Shakib/discord-object-store/releases/tag/v3.0.0" target="_blank" class="hover:text-discord-blurple transition-colors">
+                            v3.0.0
+                        </a>
+                    </h3>
+                    <p class="text-discord-light text-sm mb-5">New storage workflow with CLI commands, SQLite metadata, and faster sync.</p>
                     
                     <div class="bg-discord-bg rounded-lg border border-discord-divider p-6">
-                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-bolt text-green-400"></i> v3 Highlights
+                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <i class="fa-solid fa-bolt text-yellow-500"></i> v3 Highlights
                         </h4>
                         <ul class="space-y-3 text-sm text-discord-light">
-                            <li class="flex items-start gap-2">
+                            <li class="flex items-start gap-3">
                                 <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
                                 <span><strong>CLI Workflow:</strong> Upload, download, list, info, stats, verify, resume.</span>
                             </li>
-                            <li class="flex items-start gap-2">
+                            <li class="flex items-start gap-3">
                                 <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
                                 <span><strong>SQLite Metadata:</strong> WAL mode, indexes, and fast local search.</span>
                             </li>
-                            <li class="flex items-start gap-2">
+                            <li class="flex items-start gap-3">
                                 <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
                                 <span><strong>Discord Layout:</strong> Threaded storage channel + batch index cards.</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
-                                <span><strong>Sync & Backup:</strong> Rebuild DB from Discord and optional DB backups.</span>
-                            </li>
                         </ul>
-                        <div class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-200 text-xs flex items-start gap-2">
+                        <div class="mt-5 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-md text-yellow-200/80 text-xs flex items-start gap-3">
                             <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
                             <p><strong>Note:</strong> Keep your encryption key secure. Without it, batches cannot be decrypted.</p>
                         </div>
@@ -527,44 +587,40 @@ pip install -r requirements.txt</code></pre>
                 </div>
 
                 <!-- v2.0.0 -->
-                <div class="relative pl-8 opacity-90 hover:opacity-100 transition-opacity">
-                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-discord-light/50 ring-4 ring-discord-dark"></span>
-                    <h3 class="text-xl font-bold text-white mb-2">v2.0.0</h3>
-                    <p class="text-discord-light text-sm mb-4">Major security overhaul and architecture improvements.</p>
+                <div class="relative pl-8 opacity-80 hover:opacity-100 transition-opacity">
+                    <span class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-discord-darker border-2 border-discord-light/30 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2">
+                        <a href="https://github.com/Mo-Shakib/discord-object-store/releases/tag/v2.0.0" target="_blank" class="hover:text-discord-blurple transition-colors">
+                            v2.0.0
+                        </a>
+                    </h3>
+                    <p class="text-discord-light text-sm mb-5">Major security overhaul and architecture improvements.</p>
                     
                     <div class="bg-discord-bg rounded-lg border border-discord-divider p-6">
-                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-shield-halved text-green-400"></i> New Security Model
+                        <h4 class="text-white font-semibold mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <i class="fa-solid fa-shield-halved text-green-500"></i> New Security Model
                         </h4>
                         <ul class="space-y-3 text-sm text-discord-light">
-                            <li class="flex items-start gap-2">
+                            <li class="flex items-start gap-3">
                                 <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
                                 <span><strong>Encryption:</strong> AES-256-GCM per chunk.</span>
                             </li>
-                            <li class="flex items-start gap-2">
+                            <li class="flex items-start gap-3">
                                 <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
                                 <span><strong>Key Derivation:</strong> PBKDF2-HMAC-SHA256 with 600,000 iterations.</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
-                                <span><strong>Salt/Nonce:</strong> Per-chunk random 16-byte salt + 12-byte nonce.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <i class="fa-solid fa-check mt-1 text-xs text-discord-light/50"></i>
-                                <span><strong>Compression:</strong> Gzip level 9 applied before encryption.</span>
-                            </li>
                         </ul>
-                        <div class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-200 text-xs flex items-start gap-2">
-                            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-                            <p><strong>Important:</strong> If <code>USER_KEY</code> is not set, the slicer refuses to create chunks. The bot will upload unencrypted files only if manually placed in the upload folder.</p>
-                        </div>
                     </div>
                 </div>
 
                 <!-- v1.0.0 -->
-                <div class="relative pl-8 opacity-60 hover:opacity-100 transition-opacity">
-                    <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-discord-light/50 ring-4 ring-discord-dark"></span>
-                    <h3 class="text-xl font-bold text-white mb-2">v1.0.0</h3>
+                <div class="relative pl-8 opacity-50 hover:opacity-100 transition-opacity">
+                    <span class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-discord-darker border-2 border-discord-light/20 ring-4 ring-discord-dark"></span>
+                    <h3 class="text-xl font-bold text-white mb-2">
+                        <a href="https://github.com/Mo-Shakib/discord-object-store/releases/tag/v1.0" target="_blank" class="hover:text-discord-blurple transition-colors">
+                            v1.0.0
+                        </a>
+                    </h3>
                     <p class="text-discord-light text-sm">Initial release with basic chunking, upload/download commands, and archive cards.</p>
                 </div>
             </div>
@@ -572,49 +628,43 @@ pip install -r requirements.txt</code></pre>
     </section>
 
     <!-- Star on GitHub CTA -->
-    <section class="py-16 bg-gradient-to-b from-discord-bg to-discord-darker border-t border-discord-divider">
-        <div class="max-w-4xl mx-auto px-4 text-center reveal">
-            <h3 class="text-2xl font-bold text-white mb-6">Open Source & Community Driven</h3>
-            <p class="text-discord-light mb-8 max-w-2xl mx-auto">
-                This project is free and open source. If you find it useful, please consider starring the repository on GitHub. It helps others discover the project!
+    <section class="py-20 bg-gradient-to-br from-discord-blurple to-[#4752c4] border-t border-discord-divider relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-30"></div>
+        <div class="max-w-4xl mx-auto px-4 text-center reveal relative z-10">
+            <h3 class="text-3xl font-extrabold text-white mb-6">Open Source & Community Driven</h3>
+            <p class="text-white/80 mb-8 max-w-2xl mx-auto text-lg">
+                Join thousands of users turning Discord into their personal cloud. <br>
+                Free, secure, and always open source.
             </p>
-            <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-white text-black font-bold text-lg hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-lg shadow-white/10 group">
-                <i class="fa-regular fa-star group-hover:font-solid transition-all"></i> Star on GitHub
-            </a>
-        </div>
-    </section>
-
-    <!-- Security Note -->
-    <section class="py-16 bg-discord-darker border-y border-discord-divider">
-        <div class="max-w-4xl mx-auto px-4 text-center reveal">
-            <i class="fa-solid fa-shield-halved text-4xl text-white mb-4"></i>
-            <h3 class="text-2xl font-bold text-white mb-4">Security Notice</h3>
-            <p class="text-discord-light leading-relaxed">
-                Security is handled client-side via the python scripts. Your Discord Token is used for transport, 
-                but your <code class="bg-black/50 px-1 rounded text-white">USER_KEY</code> is used for encryption. 
-                Without the key, the files stored on Discord are just random binary blobs. 
-                Always back up your key and your local log file.
-            </p>
+            <div class="flex justify-center gap-4">
+                <a href="https://github.com/Mo-Shakib/discord-object-store" target="_blank" class="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-white text-discord-blurple font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-xl">
+                    <i class="fa-regular fa-star"></i> Star Repository
+                </a>
+            </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-discord-bg pt-12 pb-8 border-t border-discord-divider">
+    <footer class="bg-discord-darker pt-16 pb-8 border-t border-discord-divider">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="flex items-center gap-2 mb-4 md:mb-0">
-                    <i class="fa-brands fa-discord text-xl text-discord-light"></i>
-                    <span class="font-bold text-discord-light">Discord Object Store</span>
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+                <div class="flex items-center gap-3 mb-4 md:mb-0">
+                    <i class="fa-solid fa-cubes text-2xl text-discord-light"></i>
+                    <span class="font-bold text-xl text-discord-white">Object Store</span>
                 </div>
-                <div class="flex space-x-6">
+                <div class="flex space-x-8">
+                    <a href="#" class="text-discord-light hover:text-white transition-colors">Documentation</a>
+                    <a href="#" class="text-discord-light hover:text-white transition-colors">Privacy</a>
                     <a href="https://github.com/Mo-Shakib/discord-object-store" class="text-discord-light hover:text-white transition-colors">
                         <i class="fa-brands fa-github text-xl"></i>
                     </a>
                 </div>
             </div>
-            <div class="mt-8 text-center md:text-left text-xs text-discord-light/50">
-                <p>Not affiliated with Discord Inc. Use responsibly and adhere to Discord TOS.</p>
-                <p class="mt-2">&copy; 2026 Open Source Project.</p>
+            <div class="border-t border-discord-divider pt-8 text-center md:text-left">
+                <p class="text-xs text-discord-light/40">
+                    Not affiliated with Discord Inc. Use responsibly and adhere to Discord Terms of Service. <br>
+                    &copy; 2026 Open Source Project.
+                </p>
             </div>
         </div>
     </footer>
@@ -624,16 +674,16 @@ pip install -r requirements.txt</code></pre>
         // Copy to clipboard functionality
         function copyToClipboard(button) {
             const pre = button.nextElementSibling;
-            const code = pre.querySelector('code').innerText;
+            const code = pre.innerText;
             
             navigator.clipboard.writeText(code).then(() => {
                 const originalText = button.innerText;
                 button.innerText = 'Copied!';
-                button.classList.add('text-green-400');
+                button.classList.add('text-green-400', 'font-bold');
                 
                 setTimeout(() => {
                     button.innerText = originalText;
-                    button.classList.remove('text-green-400');
+                    button.classList.remove('text-green-400', 'font-bold');
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
@@ -652,7 +702,7 @@ pip install -r requirements.txt</code></pre>
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('active');
-                        observer.unobserve(entry.target); // Only animate once
+                        observer.unobserve(entry.target); 
                     }
                 });
             }, observerOptions);
