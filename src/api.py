@@ -286,6 +286,16 @@ async def api_stats() -> Dict[str, Any]:
     return get_storage_stats()
 
 
+@app.get("/api/channels")
+async def api_channels() -> Dict[str, Any]:
+    """Return configured storage channels."""
+    config = Config.get_instance()
+    return {
+        "channels": config.get_storage_channels(),
+        "default_distribution": "round-robin"
+    }
+
+
 @app.post("/api/jobs/upload")
 async def api_upload(
     files: List[UploadFile] = File(...),
