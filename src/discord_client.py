@@ -17,6 +17,45 @@ from .utils import DownloadError, UploadError, format_bytes
 logger = logging.getLogger(__name__)
 
 
+def select_storage_channel(
+    guild: discord.Guild, 
+    channel_names: List[str], 
+    batch_id: str
+) -> discord.TextChannel:
+    """
+    Select a storage channel from available channels using round-robin based on batch_id.
+    
+    Args:
+        guild: Discord guild.
+        channel_names: List of storage channel names.
+        batch_id: Batch identifier for deterministic selection.
+    
+    Returns:
+        Selected channel.
+    
+    Raises:
+        UploadError: If no channels are available.
+    """
+    if not channel_names:
+        raise UploadError("No storage channels configured.")
+    
+    # Find all existing channels
+    channels = []
+    for name in channel_names:
+        channel = discord.utils.get(guild.text_channels, name=name)
+        if channel:
+            channels.append(channel)
+    
+    if not channels:
+        raise UploadError(f"None of the configured storage channels exist: {channel_names}")
+    
+    # Use batch_id hash for deterministic round-robin selection
+    index = hash(batch_id) % len(channels)
+    selected = channels[index]
+    logger.info(f"Selected storage channel: #{selected.name} (index {index} of {len(channels)})")
+    return selected
+
+
 def setup_bot(token: str) -> discord.Client:
     """
     Initialize a Discord client with required intents.
@@ -34,37 +73,45 @@ def setup_bot(token: str) -> discord.Client:
 
 async def ensure_channels(
     guild: discord.Guild,
-    storage_name: str,
-    archive_name: str,
+    storage_names: Union[str, List[str]],
     index_name: str,
     backup_name: str,
-) -> Tuple[discord.TextChannel, discord.TextChannel, discord.TextChannel, discord.TextChannel]:
+) -> Tuple[List[discord.TextChannel], discord.TextChannel, discord.TextChannel]:
     """
-    Ensure storage and archive channels exist.
+    Ensure required Discord channels exist.
 
     Args:
         guild: Discord guild.
-        storage_name: Storage channel name.
-        archive_name: Archive channel name.
+        storage_names: Storage channel name(s) for chunks (string or list).
+        index_name: Index channel name for archive cards.
+        backup_name: Backup channel name for database backups.
 
     Returns:
-        Tuple of (storage_channel, archive_channel).
+        Tuple of (storage_channels_list, index_channel, backup_channel).
     """
-    storage_channel = discord.utils.get(guild.text_channels, name=storage_name)
-    archive_channel = discord.utils.get(guild.text_channels, name=archive_name)
+    # Handle both single string and list input
+    if isinstance(storage_names, str):
+        storage_names = [storage_names]
+    
+    # Ensure all storage channels exist
+    storage_channels = []
+    for name in storage_names:
+        channel = discord.utils.get(guild.text_channels, name=name)
+        if channel is None:
+            channel = await guild.create_text_channel(name)
+            logger.info(f"Created storage channel: #{name}")
+        storage_channels.append(channel)
+    
+    # Ensure index and backup channels
     index_channel = discord.utils.get(guild.text_channels, name=index_name)
     backup_channel = discord.utils.get(guild.text_channels, name=backup_name)
 
-    if storage_channel is None:
-        storage_channel = await guild.create_text_channel(storage_name)
-    if archive_channel is None:
-        archive_channel = await guild.create_text_channel(archive_name)
     if index_channel is None:
         index_channel = await guild.create_text_channel(index_name)
     if backup_channel is None:
         backup_channel = await guild.create_text_channel(backup_name)
 
-    return storage_channel, archive_channel, index_channel, backup_channel
+    return storage_channels, index_channel, backup_channel
 
 
 async def create_archive_card(
@@ -153,7 +200,7 @@ async def upload_chunk(
     thread: discord.Thread, chunk_path: Path, index: int, retries: int = 3
 ) -> Dict[str, Any]:
     """
-    Upload a single chunk to a Discord thread.
+    Upload a single chunk to a Discord thread with robust rate limit handling.
 
     Args:
         thread: Discord thread.
@@ -179,8 +226,18 @@ async def upload_chunk(
                 "discord_attachment_url": attachment.url,
                 "size": chunk_path.stat().st_size,
             }
+        except discord.RateLimited as exc:
+            # Explicit rate limit handling - wait for Discord's specified time
+            logger.warning(
+                "Rate limited on chunk %s. Waiting %.2f seconds.", 
+                index, 
+                exc.retry_after
+            )
+            await asyncio.sleep(exc.retry_after)
+            # Don't count rate limits against retry attempts
+            continue
         except discord.HTTPException as exc:
-            logger.warning("Upload attempt %s failed: %s", attempt, exc)
+            logger.warning("Upload attempt %s failed for chunk %s: %s", attempt, index, exc)
             if attempt >= retries:
                 raise UploadError(f"Failed to upload chunk {index}.") from exc
             await asyncio.sleep(delay)

@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from .config import Config
 from .database import add_chunk, add_file, create_batch, get_batch, get_chunks, update_batch_status
-from .discord_client import create_archive_card, create_thread, ensure_channels, setup_bot, upload_chunks_concurrent
+from .discord_client import create_archive_card, create_thread, ensure_channels, select_storage_channel, setup_bot, upload_chunks_concurrent
 from .encryption import derive_key, encrypt_file, generate_salt
 from .file_processor import calculate_file_hash, create_archive, scan_path, split_file
 from .system_integration import SleepInhibitor, send_notification
@@ -30,7 +30,9 @@ def _base_dir() -> Path:
 
 
 def _temp_dir(batch_id: str) -> Path:
-    return _base_dir() / f"temp_{batch_id}"
+    temp = _base_dir() / f"temp_{batch_id}"
+    temp.mkdir(parents=True, exist_ok=True, mode=0o700)  # Owner-only permissions
+    return temp
 
 
 def _chunk_index_from_path(path: Path) -> int:
@@ -90,15 +92,15 @@ def _normalize_metadata(metadata: Optional[Dict[str, str]]) -> Dict[str, str]:
     }
 
 
-def cleanup_temp_files(temp_dir: Path) -> None:
+async def cleanup_temp_files(temp_dir: Path) -> None:
     """
-    Remove temporary directory.
+    Remove temporary directory asynchronously.
 
     Args:
         temp_dir: Temporary directory to remove.
     """
     if temp_dir.exists():
-        shutil.rmtree(temp_dir, ignore_errors=True)
+        await asyncio.to_thread(shutil.rmtree, temp_dir, ignore_errors=True)
 
 
 async def _prepare_chunks(
@@ -131,23 +133,31 @@ async def _prepare_chunks(
             raise StorageBotError("Upload cancelled by user.")
 
     temp_dir = _temp_dir(batch_id)
-    temp_dir.mkdir(parents=True, exist_ok=True)
     archive_path = temp_dir / f"{source_path.name}.tar.gz"
     encrypted_path = temp_dir / f"{source_path.name}.tar.gz.enc"
 
     print("✓ Creating archive...")
     await asyncio.to_thread(create_archive, files, archive_path)
+    
     print("✓ Encrypting archive...")
-    await asyncio.to_thread(encrypt_file, archive_path, encrypted_path, key)
+    # Progress callback for encryption
+    def _encryption_progress(current: int, total: int, name: Optional[str]) -> None:
+        if total > 0:
+            percent = (current / total) * 100
+            print(f"\rEncrypting: {percent:.1f}%", end="", flush=True)
+    
+    await encrypt_file(archive_path, encrypted_path, key, progress_callback=_encryption_progress)
+    print()  # Newline after progress
+    
     print("✓ Splitting into chunks...")
-
     config = Config.get_instance()
     chunk_paths = await split_file(encrypted_path, config.max_chunk_size)
 
-    chunk_hashes = []
-    for chunk_path in chunk_paths:
-        digest = await calculate_file_hash(chunk_path)
-        chunk_hashes.append(digest)
+    print("✓ Hashing chunks...")
+    # Parallel chunk hashing for better performance
+    chunk_hashes = await asyncio.gather(
+        *[calculate_file_hash(chunk_path) for chunk_path in chunk_paths]
+    )
 
     return {
         "files": files,
@@ -162,7 +172,11 @@ async def _prepare_chunks(
 
 
 async def upload(
-    path: str, confirm: bool = True, metadata: Optional[Dict[str, str]] = None
+    path: str, 
+    confirm: bool = True, 
+    metadata: Optional[Dict[str, str]] = None, 
+    channel: Optional[str] = None,
+    progress_callback: Optional[callable] = None
 ) -> str:
     """
     Upload a file or folder to Discord storage.
@@ -170,6 +184,9 @@ async def upload(
     Args:
         path: Path to file or folder.
         confirm: Require confirmation before upload.
+        metadata: Optional metadata (title, tags, description).
+        channel: Optional specific channel name to use (None = auto round-robin).
+        progress_callback: Optional callback(done, total) for upload progress.
 
     Returns:
         Batch ID.
@@ -182,6 +199,7 @@ async def upload(
 
     sleep_inhibitor = SleepInhibitor()
     sleep_inhibitor.start()
+    temp_dir = None
     try:
         prepared = await _prepare_chunks(source_path, batch_id, key, confirm, metadata)
         chunk_paths = prepared["chunk_paths"]
@@ -199,13 +217,30 @@ async def upload(
                 if not client.guilds:
                     raise StorageBotError("Bot is not connected to any guild.")
                 guild = client.guilds[0]
-                storage_channel, _, index_channel, _ = await ensure_channels(
+                
+                # Get available storage channels
+                storage_channel_names = config.get_storage_channels()
+                storage_channels, index_channel, _ = await ensure_channels(
                     guild,
-                    config.storage_channel_name,
-                    config.archive_channel_name,
+                    storage_channel_names,
                     config.batch_index_channel_name,
                     config.backup_channel_name,
                 )
+                
+                # Select storage channel for this batch
+                if channel:
+                    # Manual channel selection
+                    storage_channel = discord.utils.get(guild.text_channels, name=channel)
+                    if storage_channel is None:
+                        # Create if doesn't exist
+                        storage_channel = await guild.create_text_channel(channel)
+                        logger.info(f"Created new storage channel: #{channel}")
+                    print(f"✓ Using storage channel: #{storage_channel.name} (manual selection)")
+                else:
+                    # Auto round-robin selection
+                    storage_channel = select_storage_channel(guild, storage_channel_names, batch_id)
+                    print(f"✓ Using storage channel: #{storage_channel.name} (auto round-robin)")
+                
                 storage_message = await storage_channel.send(f"📦 Batch `{batch_id}` chunks")
                 thread = await create_thread(storage_message, f"Batch {batch_id}")
                 archive_message = await create_archive_card(
@@ -239,6 +274,8 @@ async def upload(
                     "status": "uploading",
                     "archive_message_id": str(archive_message.id),
                     "thread_id": str(thread.id),
+                    "storage_channel_id": str(storage_channel.id),
+                    "storage_channel_name": storage_channel.name,
                 }
                 create_batch(batch_metadata)
 
@@ -262,6 +299,9 @@ async def upload(
                     progress.n = done
                     progress.total = total
                     progress.refresh()
+                    # Call API progress callback if provided
+                    if progress_callback:
+                        progress_callback(done, total)
 
                 chunk_metadata = await upload_chunks_concurrent(
                     thread,
@@ -281,7 +321,7 @@ async def upload(
                     )
 
                 update_batch_status(batch_id, "complete")
-                cleanup_temp_files(temp_dir)
+                await cleanup_temp_files(temp_dir)
                 result_future.set_result(batch_id)
             except Exception as exc:
                 logger.exception("Upload failed")
@@ -301,6 +341,9 @@ async def upload(
         send_notification("Upload failed", f"Batch {batch_id} failed: {exc}")
         raise
     finally:
+        # Always cleanup temp files, even if upload fails early
+        if temp_dir and temp_dir.exists():
+            await cleanup_temp_files(temp_dir)
         sleep_inhibitor.stop()
 
 
@@ -323,6 +366,7 @@ async def resume_upload(batch_id: str) -> str:
 
     sleep_inhibitor = SleepInhibitor()
     sleep_inhibitor.start()
+    temp_dir = None
     try:
         temp_dir = _temp_dir(batch_id)
         if not temp_dir.exists():
@@ -337,7 +381,7 @@ async def resume_upload(batch_id: str) -> str:
         remaining = [item for item in indexed_paths if item[0] not in uploaded]
         if not remaining:
             update_batch_status(batch_id, "complete")
-            cleanup_temp_files(temp_dir)
+            await cleanup_temp_files(temp_dir)
             return batch_id
 
         client = setup_bot(config.discord_bot_token)
@@ -382,7 +426,7 @@ async def resume_upload(batch_id: str) -> str:
                     )
 
                 update_batch_status(batch_id, "complete")
-                cleanup_temp_files(temp_dir)
+                await cleanup_temp_files(temp_dir)
                 result_future.set_result(batch_id)
             except Exception as exc:
                 logger.exception("Resume upload failed")
@@ -400,4 +444,7 @@ async def resume_upload(batch_id: str) -> str:
         send_notification("Upload failed", f"Batch {batch_id} failed: {exc}")
         raise
     finally:
+        # Always cleanup temp files, even if resume fails
+        if temp_dir and temp_dir.exists():
+            await cleanup_temp_files(temp_dir)
         sleep_inhibitor.stop()

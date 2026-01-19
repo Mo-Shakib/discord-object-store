@@ -45,6 +45,66 @@ def prompt_bot_token() -> str:
         print("Invalid token format. Please try again.")
 
 
+def prompt_encryption_key() -> str:
+    """
+    Prompt the user for an encryption key.
+
+    Returns:
+        Validated encryption key.
+    """
+    print(f"\n{Fore.YELLOW}Encryption Key Setup{Style.RESET_ALL}")
+    print("=" * 50)
+    print("Your encryption key secures all uploaded files.")
+    print(f"{Fore.RED}⚠️  CRITICAL: Without this key, you CANNOT decrypt your files!{Style.RESET_ALL}")
+    print(f"{Fore.RED}⚠️  Store it somewhere safe (password manager, etc.){Style.RESET_ALL}\n")
+    
+    choice = input("Do you have an existing encryption key? [y/N]: ").strip().lower()
+    
+    if choice == "y":
+        # User provides their own key
+        while True:
+            print("\nPaste your encryption key (Fernet format, base64-encoded):")
+            key = input("> ").strip()
+            
+            if not key:
+                print("Key cannot be empty.")
+                continue
+            
+            # Validate it's a valid Fernet key
+            try:
+                from cryptography.fernet import Fernet
+                Fernet(key.encode('utf-8'))
+                print(f"{Fore.GREEN}✓ Valid encryption key.{Style.RESET_ALL}")
+                return key
+            except Exception:
+                print(f"{Fore.RED}✗ Invalid encryption key format.{Style.RESET_ALL}")
+                print("A valid Fernet key is 44 characters long and base64-encoded.")
+                retry = input("Try again? [y/N]: ").strip().lower()
+                if retry != "y":
+                    print("\nGenerating a new key instead...")
+                    break
+    
+    # Generate new key
+    print(f"\n{Fore.CYAN}Generating new encryption key...{Style.RESET_ALL}")
+    new_key = generate_encryption_key()
+    
+    print(f"\n{Fore.GREEN}{'=' * 50}{Style.RESET_ALL}")
+    print(f"{Fore.GREEN}Your Encryption Key:{Style.RESET_ALL}")
+    print(f"{Fore.YELLOW}{new_key}{Style.RESET_ALL}")
+    print(f"{Fore.GREEN}{'=' * 50}{Style.RESET_ALL}\n")
+    
+    print(f"{Fore.RED}⚠️  SAVE THIS KEY NOW!{Style.RESET_ALL}")
+    print("Copy it to a password manager, secure note, or backup location.")
+    print("This key will be saved to .env, but you should have a backup.\n")
+    
+    confirm = input("Have you saved the key? Type 'YES' to continue: ").strip()
+    if confirm != "YES":
+        print(f"\n{Fore.RED}Setup cancelled. Please save the key and run setup again.{Style.RESET_ALL}")
+        sys.exit(1)
+    
+    return new_key
+
+
 async def test_connection(token: str) -> Optional[int]:
     """
     Verify the Discord bot token by connecting.
@@ -74,15 +134,16 @@ async def test_connection(token: str) -> Optional[int]:
 
 
 async def ensure_channels_setup(
-    token: str, storage_name: str, archive_name: str, index_name: str, backup_name: str
+    token: str, storage_name: str, index_name: str, backup_name: str
 ) -> bool:
     """
-    Ensure storage and archive channels exist. Returns True if any were missing.
+    Ensure required Discord channels exist. Returns True if any were missing.
 
     Args:
         token: Discord bot token.
-        storage_name: Storage channel name.
-        archive_name: Archive channel name.
+        storage_name: Storage channel name for chunks.
+        index_name: Index channel name for archive cards.
+        backup_name: Backup channel name for database backups.
 
     Returns:
         True if channels were missing and created.
@@ -99,16 +160,11 @@ async def ensure_channels_setup(
         guild = client.guilds[0]
         storage_channel = discord.utils.get(
             guild.text_channels, name=storage_name)
-        archive_channel = discord.utils.get(
-            guild.text_channels, name=archive_name)
         index_channel = discord.utils.get(guild.text_channels, name=index_name)
         backup_channel = discord.utils.get(
             guild.text_channels, name=backup_name)
         if storage_channel is None:
             await guild.create_text_channel(storage_name)
-            created_missing = True
-        if archive_channel is None:
-            await guild.create_text_channel(archive_name)
             created_missing = True
         if index_channel is None:
             await guild.create_text_channel(index_name)
@@ -153,13 +209,12 @@ def run_setup() -> None:
     _check_python_version()
 
     token = prompt_bot_token()
-    encryption_key = generate_encryption_key()
+    encryption_key = prompt_encryption_key()
 
     config = Config(
         discord_bot_token=token,
         encryption_key=encryption_key,
         storage_channel_name="file-storage-vault",
-        archive_channel_name="archive-cards",
         batch_index_channel_name="batch-index",
         backup_channel_name="db-backups",
         max_chunk_size=9_500_000,
@@ -167,7 +222,9 @@ def run_setup() -> None:
         concurrent_downloads=5,
     )
     save_config(config)
-    print(f"{Fore.GREEN}✓ Configuration saved.{Style.RESET_ALL}")
+    print(f"\n{Fore.GREEN}✓ Configuration saved to .env{Style.RESET_ALL}")
+    print(f"  Bot Token: {token[:20]}...")
+    print(f"  Encryption Key: {encryption_key[:20]}...")
 
     client_id = asyncio.run(test_connection(token))
     if client_id:
@@ -198,7 +255,6 @@ def run_setup() -> None:
         ensure_channels_setup(
             token,
             config.storage_channel_name,
-            config.archive_channel_name,
             config.batch_index_channel_name,
             config.backup_channel_name,
         )

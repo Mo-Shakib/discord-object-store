@@ -36,6 +36,7 @@ from .file_processor import calculate_file_hash
 from .syncer import sync_from_discord
 from .uploader import upload
 from .utils import StorageBotError
+from .system_integration import open_folder_in_explorer
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -83,6 +84,10 @@ class SyncRequest(BaseModel):
 
 class BackupRequest(BaseModel):
     upload_to_discord: bool = False
+
+
+class OpenFolderRequest(BaseModel):
+    path: str
 
 
 app = FastAPI(title="Discord Object Store API")
@@ -286,6 +291,26 @@ async def api_stats() -> Dict[str, Any]:
     return get_storage_stats()
 
 
+@app.get("/api/channels")
+async def api_channels() -> Dict[str, Any]:
+    """Return configured storage channels."""
+    config = Config.get_instance()
+    return {
+        "channels": config.get_storage_channels(),
+        "default_distribution": "round-robin"
+    }
+
+
+async def _set_progress(job_id: str, progress: int, message: str = "") -> None:
+    """Set job progress and optionally log a message."""
+    async with JOB_LOCK:
+        job = JOBS[job_id]
+        job.progress = progress
+        if message:
+            # Add special progress marker that frontend can parse
+            job.logs.append(f"PROGRESS:{progress}:{message}")
+
+
 @app.post("/api/jobs/upload")
 async def api_upload(
     files: List[UploadFile] = File(...),
@@ -294,6 +319,7 @@ async def api_upload(
     description: str = Form(""),
     confirm: bool = Form(False),
     root_name: str = Form(""),
+    channel: str = Form(""),
 ) -> Dict[str, str]:
     job = _create_job("upload")
     meta = {"title": title, "tags": tags, "description": description}
@@ -304,8 +330,9 @@ async def api_upload(
 
     try:
         await _log(job.id, "Receiving upload...")
+        await _set_progress(job.id, 5, "Receiving files")
         normalized_root = root_name.strip().strip("/").replace("\\", "/")
-        for upload_file in files:
+        for idx, upload_file in enumerate(files):
             relative_name = upload_file.filename.replace("\\", "/")
             if normalized_root and not relative_name.startswith(f"{normalized_root}/"):
                 relative_name = f"{normalized_root}/{relative_name}"
@@ -320,6 +347,9 @@ async def api_upload(
                     await outfile.write(chunk)
             await upload_file.close()
             uploaded_paths.append(target_path)
+            # Update progress for file reception
+            file_progress = int(10 + (idx + 1) / len(files) * 20)
+            await _set_progress(job.id, file_progress, f"Received {idx + 1}/{len(files)} files")
         await _log(job.id, f"Saved {len(uploaded_paths)} file(s).")
     except Exception as exc:
         await _fail_job(job.id, f"Failed to save upload: {exc}")
@@ -336,9 +366,26 @@ async def api_upload(
 
     async def _work() -> Dict[str, Any]:
         await _log(job.id, "Starting Discord upload...")
+        await _set_progress(job.id, 30, "Preparing chunks")
+
+        # Create progress callback for chunk uploads
+        def _upload_progress(done: int, total: int) -> None:
+            # Map chunk upload progress to 30-95% range
+            progress_pct = int(30 + (done / max(total, 1)) * 65)
+            asyncio.create_task(_set_progress(
+                job.id, progress_pct, f"Uploading chunks {done}/{total}"))
+
         async with DISCORD_LOCK:
             source_path = _derive_source_path()
-            batch_id = await upload(str(source_path), confirm=confirm, metadata=meta)
+            channel_name = channel.strip() if channel else None
+            batch_id = await upload(
+                str(source_path),
+                confirm=confirm,
+                metadata=meta,
+                channel=channel_name,
+                progress_callback=_upload_progress
+            )
+        await _set_progress(job.id, 100, "Upload complete")
         await _log(job.id, f"Upload complete. Batch ID: {batch_id}")
         shutil.rmtree(upload_root, ignore_errors=True)
         return {"batch_id": batch_id}
@@ -354,8 +401,23 @@ async def api_download(payload: DownloadRequest) -> Dict[str, str]:
 
     async def _work() -> Dict[str, Any]:
         await _log(job.id, f"Restoring batch to {destination}...")
+        await _set_progress(job.id, 10, "Starting download")
+
+        # Create progress callback for chunk downloads
+        def _download_progress(done: int, total: int) -> None:
+            # Map chunk download progress to 10-80% range
+            progress_pct = int(10 + (done / max(total, 1)) * 70)
+            asyncio.create_task(_set_progress(
+                job.id, progress_pct, f"Downloading chunks {done}/{total}"))
+
         async with DISCORD_LOCK:
-            restored_path = await download(payload.batch_id, destination)
+            restored_path = await download(
+                payload.batch_id,
+                destination,
+                progress_callback=_download_progress
+            )
+
+        await _set_progress(job.id, 100, "Download complete")
         return {"restored_path": str(restored_path)}
 
     asyncio.create_task(_run_job(job.id, _work()))
@@ -425,6 +487,23 @@ async def api_backup(payload: BackupRequest) -> Dict[str, str]:
 
     asyncio.create_task(_run_job(job.id, _work()))
     return {"job_id": job.id}
+
+
+@app.post("/api/open-folder")
+async def api_open_folder(payload: OpenFolderRequest) -> Dict[str, str]:
+    """Open a folder in the system file explorer."""
+    try:
+        folder_path = Path(payload.path)
+        if not folder_path.exists():
+            raise HTTPException(status_code=404, detail="Path does not exist.")
+        if not folder_path.is_dir():
+            # If it's a file, open the parent directory
+            folder_path = folder_path.parent
+        open_folder_in_explorer(str(folder_path))
+        return {"status": "success", "path": str(folder_path)}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to open folder: {exc}")
 
 
 @app.get("/api/jobs/{job_id}")

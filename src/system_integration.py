@@ -135,3 +135,31 @@ $notifier.Show($toast)
 
 def _escape_powershell(value: str) -> str:
     return value.replace("`", "``").replace('"', '`"')
+
+
+def open_folder_in_explorer(path: str) -> None:
+    """Open a folder in the system file explorer."""
+    if sys.platform == "darwin":
+        # macOS - open in Finder
+        subprocess.run(
+            ["open", path],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    elif sys.platform.startswith("win"):
+        # Windows - open in Explorer
+        subprocess.run(
+            ["explorer", path],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    elif sys.platform.startswith("linux"):
+        # Linux - try xdg-open
+        subprocess.run(
+            ["xdg-open", path],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )

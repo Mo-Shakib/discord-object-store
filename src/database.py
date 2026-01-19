@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -11,6 +12,8 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from .utils import DatabaseError
 
+logger = logging.getLogger(__name__)
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = BASE_DIR / "storage.db"
@@ -19,22 +22,32 @@ _POOLS: Dict[Path, "ConnectionPool"] = {}
 
 
 class ConnectionPool:
-    """Simple SQLite connection pool."""
+    """Simple SQLite connection pool with hard limit."""
 
     def __init__(self, db_path: Path, maxsize: int = 5) -> None:
         self.db_path = db_path
+        self.maxsize = maxsize
         self._queue: Queue[sqlite3.Connection] = Queue(maxsize=maxsize)
+        self._active_count: int = 0
+        self._count_lock = Lock()
 
     def acquire(self) -> sqlite3.Connection:
         try:
             return self._queue.get_nowait()
         except Exception:
+            with self._count_lock:
+                if self._active_count >= self.maxsize:
+                    # Block until a connection is available
+                    return self._queue.get(block=True, timeout=30)
+                self._active_count += 1
             return self._create_connection()
 
     def release(self, conn: sqlite3.Connection) -> None:
         try:
             self._queue.put_nowait(conn)
         except Exception:
+            with self._count_lock:
+                self._active_count -= 1
             conn.close()
 
     def _create_connection(self) -> sqlite3.Connection:
@@ -83,6 +96,16 @@ def init_database(db_path: Optional[Path] = None) -> None:
     """
     path = db_path or DEFAULT_DB_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Check if database exists and is readable
+    if path.exists():
+        try:
+            import os
+            if not os.access(path, os.R_OK | os.W_OK):
+                raise DatabaseError(f"Database file exists but is not readable/writable: {path}")
+        except Exception as e:
+            if not isinstance(e, DatabaseError):
+                raise DatabaseError(f"Error accessing database file: {e}")
     schema = """
     CREATE TABLE IF NOT EXISTS batches (
         batch_id TEXT PRIMARY KEY,
@@ -100,7 +123,9 @@ def init_database(db_path: Optional[Path] = None) -> None:
         upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'complete',
         archive_message_id TEXT,
-        thread_id TEXT
+        thread_id TEXT,
+        storage_channel_id TEXT,
+        storage_channel_name TEXT
     );
 
     CREATE TABLE IF NOT EXISTS chunks (
@@ -129,6 +154,9 @@ def init_database(db_path: Optional[Path] = None) -> None:
     CREATE INDEX IF NOT EXISTS idx_file_batch ON files(batch_id);
     """
 
+    # Migration columns (hardcoded constant for security)
+    MIGRATION_COLUMNS = ("title", "tags", "description", "storage_channel_id", "storage_channel_name")
+
     with get_connection(path) as conn:
         conn.executescript(schema)
         try:
@@ -136,8 +164,9 @@ def init_database(db_path: Optional[Path] = None) -> None:
                 "ALTER TABLE batches ADD COLUMN is_directory INTEGER DEFAULT 1")
         except sqlite3.Error:
             pass
-        for column in ("title", "tags", "description"):
+        for column in MIGRATION_COLUMNS:
             try:
+                # Safe: column is from hardcoded constant
                 conn.execute(f"ALTER TABLE batches ADD COLUMN {column} TEXT")
             except sqlite3.Error:
                 pass
@@ -155,8 +184,9 @@ def create_batch(metadata: Dict[str, Any], db_path: Optional[Path] = None) -> No
     INSERT INTO batches (
         batch_id, original_path, original_name, total_size, compressed_size,
         chunk_count, file_count, encryption_salt, is_directory, title, tags,
-        description, status, archive_message_id, thread_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        description, status, archive_message_id, thread_id, storage_channel_id,
+        storage_channel_name
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     values = (
         metadata["batch_id"],
@@ -174,6 +204,8 @@ def create_batch(metadata: Dict[str, Any], db_path: Optional[Path] = None) -> No
         metadata.get("status", "complete"),
         metadata.get("archive_message_id"),
         metadata.get("thread_id"),
+        metadata.get("storage_channel_id"),
+        metadata.get("storage_channel_name"),
     )
     with get_connection(db_path) as conn:
         conn.execute(query, values)
@@ -304,7 +336,7 @@ def list_batches(db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
     query = """
     SELECT batch_id, original_name, title, tags, description,
            total_size, compressed_size, chunk_count, file_count,
-           upload_date, status
+           upload_date, status, storage_channel_id, storage_channel_name
     FROM batches
     ORDER BY upload_date DESC
     """

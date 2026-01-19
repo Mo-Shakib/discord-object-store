@@ -14,7 +14,6 @@ from .utils import ConfigError, atomic_write
 ENV_TOKEN = "DISCORD_BOT_TOKEN"
 ENV_KEY = "ENCRYPTION_KEY"
 ENV_STORAGE_CHANNEL = "STORAGE_CHANNEL_NAME"
-ENV_ARCHIVE_CHANNEL = "ARCHIVE_CHANNEL_NAME"
 ENV_BATCH_INDEX_CHANNEL = "BATCH_INDEX_CHANNEL_NAME"
 ENV_BACKUP_CHANNEL = "BACKUP_CHANNEL_NAME"
 ENV_CHUNK_SIZE = "MAX_CHUNK_SIZE"
@@ -74,7 +73,6 @@ def save_config(config: "Config") -> None:
         f"{ENV_TOKEN}={config.discord_bot_token}",
         f"{ENV_KEY}={config.encryption_key}",
         f"{ENV_STORAGE_CHANNEL}={config.storage_channel_name}",
-        f"{ENV_ARCHIVE_CHANNEL}={config.archive_channel_name}",
         f"{ENV_BATCH_INDEX_CHANNEL}={config.batch_index_channel_name}",
         f"{ENV_BACKUP_CHANNEL}={config.backup_channel_name}",
         f"{ENV_CHUNK_SIZE}={config.max_chunk_size}",
@@ -94,7 +92,6 @@ class Config:
     discord_bot_token: str
     encryption_key: str
     storage_channel_name: str
-    archive_channel_name: str
     batch_index_channel_name: str
     backup_channel_name: str
     max_chunk_size: int
@@ -114,6 +111,15 @@ class Config:
         if cls._instance is None:
             cls._instance = load_config()
         return cls._instance
+    
+    def get_storage_channels(self) -> list[str]:
+        """
+        Get list of storage channel names.
+        
+        Returns:
+            List of channel names (supports comma-separated values).
+        """
+        return [ch.strip() for ch in self.storage_channel_name.split(",") if ch.strip()]
 
 
 def _parse_int(value: str, name: str) -> int:
@@ -155,7 +161,6 @@ def load_config() -> Config:
     encryption_key = os.getenv(ENV_KEY, "").strip()
     storage_channel = os.getenv(
         ENV_STORAGE_CHANNEL, "file-storage-vault").strip()
-    archive_channel = os.getenv(ENV_ARCHIVE_CHANNEL, "archive-cards").strip()
     batch_index_channel = os.getenv(
         ENV_BATCH_INDEX_CHANNEL, "batch-index").strip()
     backup_channel = os.getenv(ENV_BACKUP_CHANNEL, "db-backups").strip()
@@ -172,12 +177,16 @@ def load_config() -> Config:
     if not encryption_key:
         encryption_key = generate_encryption_key()
         generated_key = True
+        print("⚠️  WARNING: Auto-generated new encryption key. Backup your .env file!")
+        import logging
+        logging.getLogger(__name__).warning(
+            "New encryption key generated. Ensure .env is backed up."
+        )
 
     config = Config(
         discord_bot_token=token,
         encryption_key=encryption_key,
         storage_channel_name=storage_channel,
-        archive_channel_name=archive_channel,
         batch_index_channel_name=batch_index_channel,
         backup_channel_name=backup_channel,
         max_chunk_size=_parse_chunk_size(max_chunk),

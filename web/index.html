@@ -45,6 +45,7 @@
                         'slide-up': 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'blob': 'blob 10s infinite',
+                        'bounce': 'bounce 1s ease-in-out 3',
                     },
                     keyframes: {
                         fadeIn: {
@@ -72,6 +73,15 @@
     </script>
 
     <style>
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -97,22 +107,83 @@
             opacity: 1;
         }
 
-        input[type="text"], textarea {
+        input[type="text"], textarea, select, button:focus-visible {
             outline: none;
             transition: all 0.2s ease;
         }
-        input[type="text"]:focus, textarea:focus {
+        input[type="text"]:focus, textarea:focus, select:focus {
             border-color: #5865F2;
             box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
         }
+        
+        /* Visible focus states for accessibility */
+        button:focus-visible, a:focus-visible {
+            outline: 2px solid #5865F2;
+            outline-offset: 2px;
+        }
+        
+        /* Loading skeleton */
+        .skeleton {
+            animation: skeleton-loading 1.5s infinite;
+            background: linear-gradient(90deg, #2b2d31 25%, #3f4147 50%, #2b2d31 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
 
         .drop-zone {
-            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23B5BAC144' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23B5BAC166' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
             transition: all 0.3s;
         }
         .drop-zone:hover, .drop-zone.drag-over {
             background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%235865F2' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
             background-color: rgba(88, 101, 242, 0.05);
+        }
+        
+        /* Terminal texture - subtle scanline effect */
+        #job-logs {
+            background-image: 
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.005) 0px, transparent 1px, transparent 2px);
+        }
+        
+        /* Toast notification */
+        .toast {
+            animation: toast-in 0.3s ease-out forwards;
+            transition: all 0.3s ease;
+        }
+        @keyframes toast-in {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Clear search button */
+        .clear-search {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .clear-search.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        /* Chevron icon rotation */
+        .chevron-icon {
+            transition: transform 0.2s ease;
+        }
+        
+        /* Button disabled state */
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .animation-delay-2000 {
@@ -121,11 +192,106 @@
         .animation-delay-4000 {
             animation-delay: 4s;
         }
+
+        /* Font Awesome Animations */
+        .fa-beat {
+            animation: fa-beat 1s ease-in-out infinite;
+        }
+        @keyframes fa-beat {
+            0%, 90% { transform: scale(1); }
+            45% { transform: scale(1.15); }
+        }
+
+        .fa-fade {
+            animation: fa-fade 1s ease-in-out infinite;
+        }
+        @keyframes fa-fade {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .fa-bounce {
+            animation: fa-bounce 1s ease-in-out 3;
+        }
+        @keyframes fa-bounce {
+            0%, 100% { transform: translateY(0); }
+            25% { transform: translateY(-10px); }
+            50% { transform: translateY(0); }
+            75% { transform: translateY(-5px); }
+        }
+
+        .fa-spin {
+            animation: fa-spin 1s linear infinite;
+        }
+        @keyframes fa-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Progress bar animations */
+        .progress-container {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        /* Mobile sidebar */
+        @media (max-width: 1023px) {
+            aside {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 50;
+            }
+            aside.mobile-open {
+                transform: translateX(0);
+            }
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+
+        /* Shimmer effect for progress bar */
+        .progress-container .h-full::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
     </style>
 </head>
 <body class="bg-discord-bg text-discord-white font-sans h-screen flex overflow-hidden selection:bg-discord-brand selection:text-white">
+    
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMobileSidebar()"></div>
 
-    <aside class="w-72 bg-discord-sidebar flex flex-col border-r border-discord-divider shrink-0 z-30 shadow-xl">
+    <aside class="w-72 bg-discord-sidebar flex flex-col border-r border-discord-divider shrink-0 z-30 shadow-[4px_0_20px_rgba(0,0,0,0.3)]" id="sidebar" role="navigation" aria-label="Main navigation">
         <div class="h-20 flex items-center px-6 border-b border-discord-divider shrink-0 gap-3">
             <div class="w-10 h-10 rounded-xl bg-discord-brand flex items-center justify-center shadow-glow">
                 <i class="fa-solid fa-cubes text-2xl text-white"></i>
@@ -139,27 +305,31 @@
         <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-2">
             <div class="text-xs font-bold text-discord-light uppercase tracking-wider px-4 mb-2 opacity-80">Menu</div>
             
-            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center px-4 py-3 rounded-xl transition-all group active text-discord-white bg-discord-brand/10 text-discord-brand">
-                <i class="fa-solid fa-chart-pie w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center px-4 py-3 rounded-xl transition-all group active text-discord-white bg-discord-brand/10 text-discord-brand" aria-current="page" aria-label="Dashboard - View statistics and recent activity">
+                <i class="fa-solid fa-chart-pie w-6 text-center text-lg group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 <span class="font-medium text-sm ml-3">Dashboard</span>
+                <span class="ml-auto text-[10px] opacity-50 font-mono">D</span>
             </button>
 
-            <button onclick="switchView('upload')" id="nav-upload" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group">
-                <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+            <button onclick="switchView('upload')" id="nav-upload" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group" aria-label="Upload - Upload new artifacts">
+                <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-lg group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 <span class="font-medium text-sm ml-3">Upload Artifact</span>
+                <span class="ml-auto text-[10px] opacity-50 font-mono">U</span>
             </button>
 
-            <button onclick="switchView('batches')" id="nav-batches" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group">
-                <i class="fa-solid fa-layer-group w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+            <button onclick="switchView('batches')" id="nav-batches" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group" aria-label="File Batches - Browse and manage uploaded batches">
+                <i class="fa-solid fa-layer-group w-6 text-center text-lg group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 <span class="font-medium text-sm ml-3">File Batches</span>
+                <span class="ml-auto text-[10px] opacity-50 font-mono">B</span>
             </button>
 
             <div class="my-4 border-t border-discord-divider mx-2"></div>
             <div class="text-xs font-bold text-discord-light uppercase tracking-wider px-4 mb-2 opacity-80">System</div>
 
-            <button onclick="switchView('actions')" id="nav-actions" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group">
-                <i class="fa-solid fa-sliders w-6 text-center text-lg group-hover:scale-110 transition-transform"></i>
+            <button onclick="switchView('actions')" id="nav-actions" class="nav-item w-full flex items-center px-4 py-3 text-discord-light hover:bg-discord-hover hover:text-discord-white rounded-xl transition-all group" aria-label="Maintenance - System maintenance and backup options">
+                <i class="fa-solid fa-sliders w-6 text-center text-lg group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 <span class="font-medium text-sm ml-3">Maintenance</span>
+                <span class="ml-auto text-[10px] opacity-50 font-mono">M</span>
             </button>
         </nav>
 
@@ -183,69 +353,90 @@
 
     <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-discord-bg">
         <!-- Animated Gradient Blobs -->
-        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-50">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-30">
             <div class="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-discord-brand/30 rounded-full blur-[120px] animate-blob"></div>
             <div class="absolute bottom-[5%] right-[-5%] w-[450px] h-[450px] bg-purple-600/25 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
-            <div class="absolute top-[20%] right-[10%] w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-[110px] animate-blob animation-delay-4000"></div>
         </div>
 
-        <header class="h-20 bg-discord-bg/95 backdrop-blur-sm border-b border-discord-divider flex items-center justify-between px-8 shrink-0 z-20 sticky top-0">
-            <div class="flex flex-col justify-center">
-                 <h2 id="page-title" class="text-xl font-bold text-white tracking-tight">Dashboard</h2>
-                 <div class="flex items-center text-xs text-discord-light mt-1 font-mono">
-                    <i class="fa-solid fa-folder-tree mr-2 opacity-60"></i>
-                    <span>root</span>
-                    <span class="mx-2 opacity-30">/</span>
-                    <span id="breadcrumb-current" class="text-discord-brand">overview</span>
-                 </div>
+        <header class="h-20 bg-discord-bg/95 backdrop-blur-sm border-b border-discord-divider flex items-center justify-between px-4 lg:px-8 shrink-0 z-20 sticky top-0">
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+                <button id="mobile-menu-btn" class="lg:hidden w-10 h-10 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light hover:text-white border border-discord-divider transition-all flex items-center justify-center" aria-label="Toggle menu" aria-expanded="false">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="flex flex-col justify-center min-w-0">
+                     <h2 id="page-title" class="text-lg lg:text-xl font-bold text-white tracking-tight">Dashboard</h2>
+                     <div class="hidden sm:flex items-center text-xs text-discord-light mt-1 font-mono">
+                        <i class="fa-solid fa-clock mr-2 opacity-60" aria-hidden="true"></i>
+                        <span>Last updated: <span id="last-updated">just now</span></span>
+                     </div>
+                </div>
             </div>
             
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 lg:gap-4">
                 <div class="relative group">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-discord-light group-focus-within:text-discord-brand transition-colors"></i>
-                    <input id="global-search" type="text" placeholder="Global Search..." class="bg-discord-element border border-discord-divider rounded-full py-2 pl-10 pr-4 text-sm w-64 text-white focus:w-72 transition-all shadow-sm">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-discord-light group-focus-within:text-discord-brand transition-colors pointer-events-none" aria-hidden="true"></i>
+                    <input id="global-search" type="text" placeholder="Search... (/)" class="bg-discord-element border border-discord-divider rounded-full py-2 pl-10 pr-10 text-sm w-40 lg:w-64 text-white focus:w-48 lg:focus:w-72 transition-all shadow-sm" aria-label="Global search">
+                    <button id="clear-search-btn" class="clear-search absolute right-3 top-1/2 transform -translate-y-1/2 text-discord-light hover:text-white transition-colors" aria-label="Clear search">
+                        <i class="fa-solid fa-times text-xs" aria-hidden="true"></i>
+                    </button>
                 </div>
-                <button id="refresh-btn" class="w-10 h-10 rounded-full bg-discord-element hover:bg-discord-brand text-discord-light hover:text-white border border-discord-divider hover:border-discord-brand transition-all flex items-center justify-center shadow-sm" title="Refresh Data">
-                    <i class="fa-solid fa-rotate"></i>
+                <div class="relative group hidden lg:block">
+                    <button class="w-10 h-10 rounded-full bg-discord-element hover:bg-discord-hover text-discord-light hover:text-white border border-discord-divider transition-all flex items-center justify-center shadow-sm" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+                        <i class="fa-solid fa-keyboard text-sm" aria-hidden="true"></i>
+                    </button>
+                    <div class="absolute right-0 top-12 bg-discord-sidebar border border-discord-divider rounded-xl p-4 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-64 z-50">
+                        <h4 class="text-xs font-bold text-discord-light uppercase tracking-wider mb-3">Keyboard Shortcuts</h4>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center"><span class="text-discord-light">Dashboard</span><kbd class="bg-discord-element px-2 py-1 rounded font-mono text-white">D</kbd></div>
+                            <div class="flex justify-between items-center"><span class="text-discord-light">Upload</span><kbd class="bg-discord-element px-2 py-1 rounded font-mono text-white">U</kbd></div>
+                            <div class="flex justify-between items-center"><span class="text-discord-light">Batches</span><kbd class="bg-discord-element px-2 py-1 rounded font-mono text-white">B</kbd></div>
+                            <div class="flex justify-between items-center"><span class="text-discord-light">Maintenance</span><kbd class="bg-discord-element px-2 py-1 rounded font-mono text-white">M</kbd></div>
+                            <div class="flex justify-between items-center"><span class="text-discord-light">Search</span><kbd class="bg-discord-element px-2 py-1 rounded font-mono text-white">/</kbd></div>
+                            <div class="flex justify-between items-center"><span class="text-discord-light">Refresh</span><kbd class="bg-discord-element px-2 py-1 rounded font-mono text-white">R</kbd></div>
+                        </div>
+                    </div>
+                </div>
+                <button id="refresh-btn" class="w-10 h-10 rounded-full bg-discord-element hover:bg-discord-brand text-discord-light hover:text-white border border-discord-divider hover:border-discord-brand transition-all flex items-center justify-center shadow-sm" title="Refresh Data (R)" aria-label="Refresh data">
+                    <i class="fa-solid fa-rotate" aria-hidden="true"></i>
                 </button>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-8 scroll-smooth relative z-10" id="main-container">
             
-            <section id="dashboard" class="view-section active animate-fade-in space-y-8">
+            <section id="dashboard" class="view-section active animate-fade-in space-y-8" role="region" aria-label="Dashboard overview">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
-                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider hover:border-purple-500/30 relative overflow-hidden group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all duration-300">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-10 group-hover:opacity-15 group-hover:scale-110 transition-all" aria-hidden="true">
                             <i class="fa-solid fa-layer-group"></i>
                         </div>
                         <div class="flex justify-between items-start mb-4 relative z-10">
                             <div>
                                 <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Total Batches</h3>
-                                <div id="stat-batches" class="text-3xl font-extrabold text-white">--</div>
+                                <div id="stat-batches" class="text-3xl font-extrabold text-white skeleton rounded" style="min-width: 60px; min-height: 40px;">--</div>
                             </div>
                             <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
-                                <i class="fa-solid fa-layer-group"></i>
+                                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
                             </div>
                         </div>
                         <div class="text-xs text-discord-light relative z-10">
-                            <span class="text-green-400"><i class="fa-solid fa-arrow-up"></i> Live</span> tracking enabled
+                            <span class="text-green-400"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> Live</span> tracking enabled
                         </div>
                     </div>
 
-                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider hover:border-green-500/30 relative overflow-hidden group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)] transition-all duration-300">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-10 group-hover:opacity-15 group-hover:scale-110 transition-all" aria-hidden="true">
                             <i class="fa-solid fa-hard-drive"></i>
                         </div>
                         <div class="flex justify-between items-start mb-4 relative z-10">
                             <div>
                                 <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Total Size</h3>
-                                <div id="stat-total" class="text-3xl font-extrabold text-white">--</div>
+                                <div id="stat-total" class="text-3xl font-extrabold text-white skeleton rounded" style="min-width: 80px; min-height: 40px;">--</div>
                             </div>
                             <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20">
-                                <i class="fa-solid fa-hard-drive"></i>
+                                <i class="fa-solid fa-hard-drive" aria-hidden="true"></i>
                             </div>
                         </div>
                         <div class="text-xs text-discord-light relative z-10">
@@ -253,18 +444,18 @@
                         </div>
                     </div>
 
-                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider hover:border-blue-500/30 relative overflow-hidden group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-300">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-10 group-hover:opacity-15 group-hover:scale-110 transition-all" aria-hidden="true">
                             <i class="fa-regular fa-file-zipper"></i>
                         </div>
                         <div class="flex justify-between items-start mb-4 relative z-10">
                             <div>
                                 <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Compressed</h3>
-                                <div id="stat-compressed" class="text-3xl font-extrabold text-white">--</div>
+                                <div id="stat-compressed" class="text-3xl font-extrabold text-white skeleton rounded" style="min-width: 80px; min-height: 40px;">--</div>
                             </div>
                             <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
-                                <i class="fa-regular fa-file-zipper"></i>
+                                <i class="fa-regular fa-file-zipper" aria-hidden="true"></i>
                             </div>
                         </div>
                         <div class="text-xs text-discord-light relative z-10">
@@ -272,18 +463,18 @@
                         </div>
                     </div>
 
-                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 shadow-card">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
-                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-20 group-hover:scale-110 transition-transform">
+                    <div class="bg-discord-sidebar rounded-2xl p-6 border border-discord-divider hover:border-yellow-500/30 relative overflow-hidden group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(234,179,8,0.15)] transition-all duration-300">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div>
+                        <div class="absolute -right-6 -bottom-6 text-9xl text-discord-element opacity-10 group-hover:opacity-15 group-hover:scale-110 transition-all" aria-hidden="true">
                             <i class="fa-solid fa-puzzle-piece"></i>
                         </div>
                         <div class="flex justify-between items-start mb-4 relative z-10">
                             <div>
                                 <h3 class="text-discord-light text-xs font-bold uppercase tracking-wider mb-1">Chunks</h3>
-                                <div id="stat-chunks" class="text-3xl font-extrabold text-white">--</div>
+                                <div id="stat-chunks" class="text-3xl font-extrabold text-white skeleton rounded" style="min-width: 60px; min-height: 40px;">--</div>
                             </div>
                             <div class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20">
-                                <i class="fa-solid fa-puzzle-piece"></i>
+                                <i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i>
                             </div>
                         </div>
                         <div class="text-xs text-discord-light relative z-10">
@@ -293,33 +484,27 @@
                 </div>
 
                 <div class="grid grid-cols-1 gap-6 animate-slide-up">
-                    <div class="bg-discord-element rounded-2xl border border-discord-divider flex flex-col shadow-2xl overflow-hidden min-h-[400px]">
+                    <div class="bg-discord-element rounded-2xl border border-discord-divider flex flex-col shadow-2xl overflow-hidden min-h-[400px]" role="region" aria-label="Job logs">
                         <div class="bg-[#2b2d31] px-5 py-3 border-b border-discord-divider flex items-center justify-between">
                             <div class="flex items-center gap-4">
-                                <div class="flex gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 cursor-pointer"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 cursor-pointer"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 cursor-pointer"></div>
-                                </div>
-                                <div class="h-4 w-[1px] bg-discord-divider"></div>
                                 <span class="font-mono text-xs text-discord-light flex items-center gap-2">
-                                    <i class="fa-solid fa-terminal text-discord-brand"></i>
-                                    bot.py — active job
+                                    <i class="fa-solid fa-terminal text-discord-brand" aria-hidden="true"></i>
+                                    <span class="hidden sm:inline">bot.py — </span>active job
                                 </span>
                             </div>
-                            <div id="job-summary" class="text-xs font-mono font-bold text-discord-light uppercase bg-discord-bg px-3 py-1 rounded-md border border-discord-divider">
+                            <div id="job-summary" class="text-xs font-mono font-bold text-discord-light uppercase bg-discord-bg px-3 py-1 rounded-md border border-discord-divider" role="status">
                                 IDLE
                             </div>
                         </div>
 
-                        <div class="h-1 bg-discord-bg w-full">
+                        <div class="h-1 bg-discord-bg w-full" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                             <div id="job-progress" class="h-full bg-gradient-to-r from-discord-brand to-purple-500 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(88,101,242,0.5)]" style="width: 0%;"></div>
                         </div>
                         
-                        <pre id="job-logs" class="flex-1 p-6 font-mono text-sm text-discord-light/90 whitespace-pre-wrap overflow-y-auto custom-scrollbar selection:bg-discord-brand selection:text-white leading-relaxed">
-<span class="text-discord-brand">➜</span> System initialized.
-<span class="text-discord-brand">➜</span> Waiting for job dispatch...
-                        </pre>
+                        <div id="job-logs" class="flex-1 p-6 font-mono text-sm text-discord-light/90 overflow-y-auto custom-scrollbar selection:bg-discord-brand selection:text-white leading-relaxed space-y-1" role="log" aria-live="polite">
+<div class="animate-fade-in"><span class="text-discord-brand"><i class="fa-solid fa-circle-check mr-2" aria-hidden="true"></i></span>System initialized.</div>
+<div class="animate-fade-in"><span class="text-discord-brand"><i class="fa-solid fa-clock mr-2 fa-spin" aria-hidden="true"></i></span>Waiting for job dispatch...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -330,48 +515,13 @@
                                 <i class="fa-solid fa-chart-line"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-white">Activity & Insights</h3>
-                                <p class="text-xs text-discord-light">Last 7 days of storage activity</p>
+                                <h3 class="text-base font-bold text-white">Recent Activity</h3>
+                                <p class="text-xs text-discord-light">Latest uploads and batch operations</p>
                             </div>
                         </div>
                         <span class="text-xs font-mono text-discord-brand bg-discord-brand/10 px-3 py-1 rounded-full border border-discord-brand/20">Live</span>
                     </div>
-                    <div class="px-6 py-5 space-y-6">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Upload Volume</div>
-                                        <div id="upload-volume-total" class="text-lg font-bold text-white mt-1">-- batches</div>
-                                    </div>
-                                    <span id="upload-volume-trend" class="text-xs font-mono text-discord-light bg-discord-bg/60 border border-discord-divider/60 px-2 py-1 rounded-full">--</span>
-                                </div>
-                                <div id="upload-volume-bars" class="flex items-end gap-2 h-28"></div>
-                                <div id="upload-volume-labels" class="flex justify-between text-[10px] text-discord-light mt-3 font-mono"></div>
-                            </div>
-                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Storage Growth</div>
-                                        <div id="storage-growth-total" class="text-lg font-bold text-white mt-1">--</div>
-                                    </div>
-                                    <span id="storage-growth-trend" class="text-xs font-mono text-discord-light bg-discord-bg/60 border border-discord-divider/60 px-2 py-1 rounded-full">--</span>
-                                </div>
-                                <div class="h-28 bg-discord-bg/60 rounded-xl border border-discord-divider/60 p-3">
-                                    <svg viewBox="0 0 200 60" class="w-full h-full">
-                                        <defs>
-                                            <linearGradient id="growthLine" x1="0" y1="0" x2="1" y2="0">
-                                                <stop offset="0%" stop-color="#5865F2" />
-                                                <stop offset="100%" stop-color="#8b5cf6" />
-                                            </linearGradient>
-                                        </defs>
-                                        <path id="storage-growth-line" d="M5 50 L35 42 L65 38 L95 30 L125 24 L155 18 L195 12" fill="none" stroke="url(#growthLine)" stroke-width="3" stroke-linecap="round" />
-                                        <path id="storage-growth-area" d="M5 50 L35 42 L65 38 L95 30 L125 24 L155 18 L195 12 L195 60 L5 60 Z" fill="url(#growthLine)" opacity="0.15" />
-                                    </svg>
-                                </div>
-                                <div id="storage-growth-labels" class="flex justify-between text-[10px] text-discord-light mt-3 font-mono"></div>
-                            </div>
-                        </div>
+                    <div class="px-6 py-5">
                         <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Recent Activity</div>
@@ -384,35 +534,37 @@
                 </div>
             </section>
 
-            <section id="upload" class="view-section animate-fade-in space-y-6 max-w-4xl mx-auto">
+            <section id="upload" class="view-section animate-fade-in space-y-6 max-w-4xl mx-auto" role="region" aria-label="Upload artifact">
                 <div class="bg-discord-sidebar rounded-2xl border border-discord-divider overflow-hidden shadow-card">
                     <div class="p-6 border-b border-discord-divider">
                         <h2 class="text-2xl font-bold text-white mb-1">Upload New Artifact</h2>
-                        <p class="text-discord-light text-sm">Select files or folders to compress and upload to the Object Store.</p>
+                        <p class="text-discord-light text-sm">Select files or folders to compress and upload to the Object Store. Max recommended size: 25MB per file.</p>
                     </div>
                     
                     <div class="p-8">
                         <form id="upload-form" class="space-y-5">
                             <div class="space-y-3">
-                                <!-- <label class="text-xs font-bold text-discord-light uppercase tracking-wide">File Selection</label> -->
-                                <div id="drop-area" class="drop-zone rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px] relative group">
-                                    <input id="upload-file" type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                <div id="drop-area" class="drop-zone rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px] relative group" role="button" tabindex="0" aria-label="Upload file area">
+                                    <input id="upload-file" type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" aria-label="File input">
                                     
                                     <div class="w-16 h-16 bg-discord-brand/10 rounded-full flex items-center justify-center text-discord-brand mb-4 group-hover:scale-110 transition-transform duration-300">
-                                        <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                                        <i class="fa-solid fa-cloud-arrow-up text-3xl" aria-hidden="true"></i>
                                     </div>
                                     <h3 class="text-white font-bold text-lg mb-1">Click to browse or drag file here</h3>
                                     <p class="text-discord-light text-sm max-w-xs mx-auto">Supports individual files or directory structures (when folder mode is active).</p>
                                     <div id="file-name-display" class="mt-4 px-4 py-2 bg-discord-brand rounded-full text-xs font-bold text-white hidden animate-fade-in">
-                                        <i class="fa-solid fa-file mr-2"></i> <span id="selected-filename">filename.zip</span>
+                                        <i class="fa-solid fa-file mr-2" aria-hidden="true"></i> <span id="selected-filename">filename.zip</span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3 mt-2 pl-1">
+                                <div class="flex items-center gap-3 mt-2 pl-1 p-3 bg-discord-element/30 rounded-lg border border-discord-divider/50">
                                     <div class="relative inline-block w-10 h-6 align-middle select-none transition duration-200 ease-in">
-                                        <input type="checkbox" name="toggle" id="upload-folder-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer left-1 top-1 transition-all duration-300"/>
+                                        <input type="checkbox" name="toggle" id="upload-folder-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer left-1 top-1 transition-all duration-300" aria-describedby="folder-toggle-desc"/>
                                         <label for="upload-folder-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-discord-element border border-discord-divider cursor-pointer"></label>
                                     </div>
-                                    <label for="upload-folder-toggle" class="text-sm font-medium text-discord-light cursor-pointer select-none">Upload as folder (preserves relative paths)</label>
+                                    <div class="flex-1">
+                                        <label for="upload-folder-toggle" class="text-sm font-medium text-white cursor-pointer select-none block">Upload as folder</label>
+                                        <span id="folder-toggle-desc" class="text-xs text-discord-light">Preserves directory structure and relative paths</span>
+                                    </div>
                                 </div>
                                 <style>
                                     #upload-folder-toggle:checked + .toggle-label {
@@ -429,39 +581,60 @@
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Artifact Title</label>
+                                    <label for="upload-title" class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Artifact Title</label>
                                     <div class="relative">
-                                        <i class="fa-solid fa-tag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50"></i>
-                                        <input id="upload-title" type="text" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="e.g. Project Phoenix Assets">
+                                        <i class="fa-solid fa-tag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50" aria-hidden="true"></i>
+                                        <input id="upload-title" type="text" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-discord-light/50 focus:border-discord-brand" placeholder="e.g. Project Phoenix Assets">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Tags</label>
+                                    <label for="upload-tags" class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Tags</label>
                                     <div class="relative">
-                                        <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50"></i>
-                                        <input id="upload-tags" type="text" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand" placeholder="backup, v1, release">
+                                        <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50" aria-hidden="true"></i>
+                                        <input id="upload-tags" type="text" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-discord-light/50 focus:border-discord-brand" placeholder="backup, v1, release">
                                     </div>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Description</label>
-                                <textarea id="upload-description" rows="2" class="w-full bg-discord-element border border-discord-divider rounded-xl p-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand resize-none" placeholder="Brief summary of contents..."></textarea>
+                                <label for="upload-description" class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Description</label>
+                                <textarea id="upload-description" rows="2" class="w-full bg-discord-element border border-discord-divider rounded-xl p-4 text-sm text-white placeholder-discord-light/50 focus:border-discord-brand resize-none" placeholder="Brief summary of contents..."></textarea>
                             </div>
 
-                            <div class="pt-6 border-t border-discord-divider flex items-center justify-between">
+                            <div>
+                                <label for="upload-channel" class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">
+                                    Storage Channel
+                                    <span class="text-discord-light/50 font-normal normal-case text-xs ml-2">(Optional - Auto round-robin if not selected)</span>
+                                </label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50 pointer-events-none" aria-hidden="true"></i>
+                                    <select id="upload-channel" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-10 text-sm text-white focus:border-discord-brand appearance-none cursor-pointer">
+                                        <option value="">Auto (Round-Robin Distribution)</option>
+                                        <option value="file-storage-vault">file-storage-vault</option>
+                                        <option value="backup-storage">backup-storage</option>
+                                        <option value="archive-vault">archive-vault</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-discord-light/50 pointer-events-none" aria-hidden="true"></i>
+                                </div>
+                                <p class="text-xs text-discord-light/70 mt-2 ml-1">
+                                    <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
+                                    Select a specific channel or leave as Auto for automatic distribution across all channels
+                                </p>
+                            </div>
+
+                            <div class="pt-6 border-t border-discord-divider flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <label class="flex items-center gap-3 cursor-pointer group">
-                                    <div class="w-5 h-5 rounded border border-discord-divider bg-discord-element flex items-center justify-center group-hover:border-discord-brand transition-colors">
+                                    <div class="w-5 h-5 rounded border border-discord-divider bg-discord-element flex items-center justify-center group-hover:border-discord-brand transition-colors relative">
                                         <input id="upload-confirm" type="checkbox" class="appearance-none w-full h-full checked:bg-discord-brand rounded-sm cursor-pointer">
-                                        <i class="fa-solid fa-check text-white text-[10px] absolute opacity-0 check-icon pointer-events-none"></i>
+                                        <i class="fa-solid fa-check text-white text-[10px] absolute opacity-0 check-icon pointer-events-none" aria-hidden="true"></i>
                                         <style>
                                             #upload-confirm:checked + .check-icon { opacity: 1; }
                                         </style>
                                     </div>
                                     <span class="text-sm text-discord-light group-hover:text-white transition-colors">Require CLI Confirmation</span>
                                 </label>
-                                <button type="submit" class="bg-discord-brand hover:bg-discord-brandHover text-white px-10 py-3 rounded-full font-bold shadow-glow transition-all transform active:scale-95 text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-rocket"></i> Start Upload
+                                <button type="submit" class="bg-discord-brand hover:bg-discord-brandHover text-white px-10 py-3 rounded-full font-bold shadow-glow transition-all transform active:scale-95 hover:shadow-[0_0_20px_rgba(88,101,242,0.4)] text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" id="submit-upload-btn">
+                                    <i class="fa-solid fa-rocket" aria-hidden="true"></i> <span>Start Upload</span>
                                 </button>
                             </div>
                         </form>
@@ -469,33 +642,35 @@
                 </div>
             </section>
 
-            <section id="batches" class="view-section animate-fade-in space-y-6">
-                 <div class="flex items-center justify-between bg-discord-sidebar p-2 rounded-2xl border border-discord-divider">
-                    <div class="relative w-full max-w-md">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light"></i>
-                        <input id="batch-search" type="text" placeholder="Filter batches..." class="w-full bg-transparent border-none rounded-xl py-3 pl-12 pr-4 text-white text-sm focus:ring-0 placeholder-discord-light/50">
+            <section id="batches" class="view-section animate-fade-in space-y-6" role="region" aria-label="File batches">
+                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-discord-sidebar p-2 rounded-2xl border border-discord-divider gap-2">
+                    <div class="relative w-full sm:max-w-md flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-discord-light pointer-events-none" aria-hidden="true"></i>
+                        <input id="batch-search" type="text" placeholder="Filter batches..." class="w-full bg-transparent border-none rounded-xl py-3 pl-12 pr-4 text-white text-sm focus:ring-0 placeholder-discord-light/50" aria-label="Filter batches">
+                        <span id="batch-count" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-xs text-discord-light font-mono" aria-live="polite"></span>
                     </div>
                     <div class="flex gap-2 pr-2">
-                         <button id="batch-view-grid" class="w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors" title="Grid View">
-                            <i class="fa-solid fa-grip"></i>
+                         <button id="batch-view-grid" class="w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors" title="Grid View" aria-label="Switch to grid view">
+                            <i class="fa-solid fa-grip" aria-hidden="true"></i>
                          </button>
-                         <button id="batch-view-list" class="w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm" title="List View">
-                            <i class="fa-solid fa-list"></i>
+                         <button id="batch-view-list" class="w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm" title="List View" aria-label="Switch to list view" aria-pressed="true">
+                            <i class="fa-solid fa-list" aria-hidden="true"></i>
                          </button>
                     </div>
                 </div>
 
                 <div class="bg-discord-sidebar border border-discord-divider rounded-2xl overflow-hidden shadow-card">
                     <div id="batch-table-container" class="overflow-x-auto">
-                        <table class="w-full text-sm">
+                        <table class="w-full text-sm" role="table">
                             <thead>
                                 <tr class="bg-discord-element border-b border-discord-divider text-left">
-                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider w-32">ID</th>
-                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Artifact Name</th>
-                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Size</th>
-                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Date</th>
-                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider text-right">Actions</th>
+                                    <th class="px-4 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider w-12" scope="col"></th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider w-32" scope="col">ID</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider" scope="col">Artifact Name</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider" scope="col">Size</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider hidden lg:table-cell" scope="col">Date</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider" scope="col">Status</th>
+                                    <th class="px-6 py-4 font-mono text-xs font-bold text-discord-light uppercase tracking-wider text-right" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="batch-table" class="divide-y divide-discord-divider">
@@ -505,19 +680,23 @@
                     <div id="batch-grid" class="hidden p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     </div>
                     <div id="empty-state" class="hidden p-12 flex flex-col items-center justify-center text-center">
-                        <div class="w-16 h-16 bg-discord-element rounded-full flex items-center justify-center text-discord-light mb-4">
-                            <i class="fa-solid fa-box-open text-3xl"></i>
+                        <div class="w-20 h-20 bg-discord-element rounded-2xl flex items-center justify-center text-discord-light mb-6 border border-discord-divider relative overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-br from-discord-brand/5 to-purple-500/5"></div>
+                            <i class="fa-solid fa-box-open text-4xl relative z-10" aria-hidden="true"></i>
                         </div>
-                        <h3 class="text-white font-bold text-lg">No Batches Found</h3>
-                        <p class="text-discord-light text-sm mt-1">Upload a new artifact to get started.</p>
+                        <h3 class="text-white font-bold text-xl mb-2">No Batches Found</h3>
+                        <p class="text-discord-light text-sm mb-6 max-w-sm">Start by uploading your first artifact. Your files will be compressed and distributed across Discord storage channels.</p>
+                        <button onclick="switchView('upload')" class="bg-discord-brand hover:bg-discord-brandHover text-white px-6 py-2.5 rounded-full font-medium shadow-glow transition-all transform hover:scale-105 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> Upload First Artifact
+                        </button>
                     </div>
                 </div>
             </section>
 
-            <section id="actions" class="view-section animate-fade-in space-y-6">
+            <section id="actions" class="view-section animate-fade-in space-y-6" role="region" aria-label="System maintenance">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-xl bg-discord-sidebar border border-discord-divider flex items-center justify-center text-discord-light">
-                        <i class="fa-solid fa-wrench"></i>
+                        <i class="fa-solid fa-wrench" aria-hidden="true"></i>
                     </div>
                     <div>
                         <h2 class="text-lg font-bold text-white">System Maintenance</h2>
@@ -527,57 +706,57 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-discord-brand/50 transition-all group relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity" aria-hidden="true">
                             <i class="fa-solid fa-arrows-rotate text-6xl text-white"></i>
                         </div>
                         <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-white mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-arrows-rotate"></i>
+                            <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Sync from Discord</h3>
                         <p class="text-xs text-discord-light mb-6 min-h-[32px]">Fetch latest metadata and verify integrity of remote channels.</p>
-                        <button id="sync-btn" class="w-full bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                        <button id="sync-btn" class="w-full bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all" aria-label="Sync from Discord">
                             Run Sync
                         </button>
                     </div>
 
                     <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-red-500/50 transition-all group relative overflow-hidden">
-                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity" aria-hidden="true">
                             <i class="fa-solid fa-bomb text-6xl text-red-500"></i>
                         </div>
                         <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-red-500 mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-rotate-left"></i>
+                            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Hard Reset</h3>
                         <p class="text-xs text-discord-light mb-6 min-h-[32px]">Rebuild local DB from scratch. <span class="text-red-400">Destructive action.</span></p>
-                        <button id="sync-reset-btn" class="w-full bg-discord-element hover:bg-red-500 hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                        <button id="sync-reset-btn" class="w-full bg-discord-element hover:bg-red-500 hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all" aria-label="Hard reset database">
                             Run Reset
                         </button>
                     </div>
 
                     <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-green-500/50 transition-all group relative overflow-hidden">
-                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity" aria-hidden="true">
                             <i class="fa-solid fa-floppy-disk text-6xl text-green-500"></i>
                         </div>
                         <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-green-400 mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-floppy-disk"></i>
+                            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Local Backup</h3>
                         <p class="text-xs text-discord-light mb-6 min-h-[32px]">Dump local DB to a JSON file for safe keeping.</p>
-                        <button id="backup-btn" class="w-full bg-discord-element hover:bg-green-600 hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                        <button id="backup-btn" class="w-full bg-discord-element hover:bg-green-600 hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all" aria-label="Create local backup">
                             Create Backup
                         </button>
                     </div>
 
                     <div class="bg-discord-sidebar border border-discord-divider p-6 rounded-2xl hover:border-discord-brand/50 transition-all group relative overflow-hidden">
-                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity" aria-hidden="true">
                             <i class="fa-solid fa-cloud-arrow-up text-6xl text-discord-brand"></i>
                         </div>
                         <div class="w-12 h-12 bg-discord-element rounded-xl flex items-center justify-center text-discord-brand mb-4 border border-discord-divider group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
                         </div>
                         <h3 class="font-bold text-white mb-1">Cloud Backup</h3>
                         <p class="text-xs text-discord-light mb-6 min-h-[32px]">Backup DB and upload directly to a Discord thread.</p>
-                        <button id="backup-upload-btn" class="w-full bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all">
+                        <button id="backup-upload-btn" class="w-full bg-discord-element hover:bg-discord-brand hover:text-white text-discord-light text-xs font-bold py-3 rounded-xl border border-discord-divider transition-all" aria-label="Backup and upload to Discord">
                             Backup + Upload
                         </button>
                     </div>
@@ -587,21 +766,85 @@
     </main>
 
     <script>
+        // Mobile sidebar toggle
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+            
+            const isOpen = sidebar.classList.contains('mobile-open');
+            menuBtn.setAttribute('aria-expanded', isOpen);
+        }
+        
+        // Initialize mobile menu button
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            if (menuBtn) {
+                menuBtn.addEventListener('click', toggleMobileSidebar);
+            }
+        });
+        
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-xmark',
+                info: 'fa-circle-info',
+                warning: 'fa-triangle-exclamation'
+            };
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-discord-brand',
+                warning: 'bg-yellow-500'
+            };
+            
+            toast.className = `toast ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 max-w-sm pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type]}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
+            
+            const container = document.getElementById('notification-container') || document.body;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(400px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // Update last updated time
+        function updateLastUpdatedTime() {
+            const lastUpdated = document.getElementById('last-updated');
+            if (lastUpdated) {
+                const now = new Date();
+                lastUpdated.textContent = now.toLocaleTimeString(undefined, { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
+        }
+    
         function switchView(viewName) {
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('bg-discord-brand/10', 'text-discord-brand', 'active');
                 el.classList.add('text-discord-light');
+                el.removeAttribute('aria-current');
             });
             
             const activeNav = document.getElementById(`nav-${viewName}`);
             if (activeNav) {
                 activeNav.classList.remove('text-discord-light');
                 activeNav.classList.add('bg-discord-brand/10', 'text-discord-brand', 'active');
+                activeNav.setAttribute('aria-current', 'page');
             }
 
             let displayName = viewName.charAt(0).toUpperCase() + viewName.slice(1);
             if (viewName === 'batches') displayName = 'File Batches';
-            document.getElementById('breadcrumb-current').textContent = displayName.toLowerCase();
+            if (viewName === 'actions') displayName = 'Maintenance';
             document.getElementById('page-title').textContent = displayName;
 
             document.querySelectorAll('.view-section').forEach(el => {
@@ -617,8 +860,82 @@
                 void target.offsetWidth;
                 target.classList.add('active');
             }
+            
+            // Close mobile sidebar on view switch
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('mobile-overlay');
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('mobile-open');
+                    overlay.classList.remove('active');
+                }
+            }
         }
 
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ignore if user is typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                // Allow "/" to focus search even when in input
+                if (e.key === '/' && !e.target.id.includes('search')) {
+                    e.preventDefault();
+                    document.getElementById('global-search').focus();
+                }
+                return;
+            }
+            
+            if (e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                switchView('dashboard');
+            } else if (e.key === 'u' || e.key === 'U') {
+                e.preventDefault();
+                switchView('upload');
+            } else if (e.key === 'b' || e.key === 'B') {
+                e.preventDefault();
+                switchView('batches');
+            } else if (e.key === 'm' || e.key === 'M') {
+                e.preventDefault();
+                switchView('actions');
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                document.getElementById('refresh-btn').click();
+            } else if (e.key === '/') {
+                e.preventDefault();
+                document.getElementById('global-search').focus();
+            } else if (e.key === 'Escape') {
+                // Clear search on escape
+                const globalSearch = document.getElementById('global-search');
+                const batchSearch = document.getElementById('batch-search');
+                if (globalSearch.value) {
+                    globalSearch.value = '';
+                    globalSearch.dispatchEvent(new Event('input'));
+                } else if (batchSearch && batchSearch.value) {
+                    batchSearch.value = '';
+                    batchSearch.dispatchEvent(new Event('input'));
+                }
+            }
+        });
+        
+        // Clear search button
+        const clearSearchBtn = document.getElementById('clear-search-btn');
+        const globalSearchInput = document.getElementById('global-search');
+        
+        if (clearSearchBtn && globalSearchInput) {
+            clearSearchBtn.addEventListener('click', () => {
+                globalSearchInput.value = '';
+                globalSearchInput.dispatchEvent(new Event('input'));
+                globalSearchInput.focus();
+            });
+            
+            globalSearchInput.addEventListener('input', () => {
+                if (globalSearchInput.value) {
+                    clearSearchBtn.classList.add('visible');
+                } else {
+                    clearSearchBtn.classList.remove('visible');
+                }
+            });
+        }
+    
         const uploadToggle = document.getElementById('upload-folder-toggle');
         const uploadInput = document.getElementById('upload-file');
         const fileNameDisplay = document.getElementById('selected-filename');
@@ -665,6 +982,14 @@
         function unhighlight() {
             dropArea.classList.remove('drag-over');
         }
+        
+        // Keyboard support for drop area
+        dropArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                uploadInput.click();
+            }
+        });
 
         const jobSummary = document.getElementById('job-summary');
         const jobLogs = document.getElementById('job-logs');
@@ -684,12 +1009,43 @@
             return `${size.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`;
         };
 
+        const openFolderInFinder = async (path) => {
+            try {
+                // Try to open the folder using the API
+                const res = await fetch('/api/open-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: path })
+                });
+                
+                if (res.ok) {
+                    // Show a brief success notification
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-20 right-8 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
+                    notification.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Folder opened in Finder';
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 2000);
+                } else {
+                    throw new Error('Failed to open folder');
+                }
+            } catch (e) {
+                // Fallback: copy path to clipboard
+                navigator.clipboard.writeText(path).then(() => {
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-20 right-8 bg-discord-brand text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
+                    notification.innerHTML = '<i class="fa-solid fa-copy mr-2"></i>Path copied to clipboard';
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 2000);
+                });
+            }
+        };
+
         const startJob = (jobId) => {
             activeJobId = jobId;
             jobSummary.textContent = `JOB #${jobId}`;
             jobSummary.className = "text-xs font-mono font-bold text-discord-brand uppercase bg-discord-brand/10 px-3 py-1 rounded-md border border-discord-brand/20";
             
-            jobLogs.textContent = 'Initializing job sequence...\n';
+            jobLogs.innerHTML = '<div class="text-discord-brand animate-fade-in"><i class="fa-solid fa-rocket mr-2"></i>Initializing job sequence...</div>';
             jobProgress.style.width = '0%';
             
             switchView('dashboard');
@@ -697,6 +1053,117 @@
             if (jobTimer) clearInterval(jobTimer);
             jobTimer = setInterval(refreshJob, 1000);
             refreshJob();
+        };
+
+        const createProgressBar = (percent, label, jobType = 'upload') => {
+            const container = document.createElement('div');
+            container.className = 'progress-container my-3 animate-fade-in';
+            container.dataset.progressType = 'bar';
+            
+            // Choose icon based on job type
+            let icon = 'fa-spinner fa-spin';
+            let iconColor = 'text-discord-brand';
+            if (label.toLowerCase().includes('upload')) {
+                icon = 'fa-cloud-arrow-up fa-fade';
+                iconColor = 'text-purple-400';
+            } else if (label.toLowerCase().includes('download')) {
+                icon = 'fa-cloud-arrow-down fa-beat';
+                iconColor = 'text-blue-400';
+            } else if (label.toLowerCase().includes('receiv')) {
+                icon = 'fa-inbox';
+                iconColor = 'text-green-400';
+            }
+            
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'flex items-center justify-between text-xs mb-2';
+            labelDiv.innerHTML = `
+                <span class="text-discord-light flex items-center">
+                    <i class="fa-solid ${icon} mr-2 ${iconColor}"></i>
+                    <span>${escapeHtml(label)}</span>
+                </span>
+                <span class="text-discord-brand font-bold tabular-nums">${percent}%</span>
+            `;
+            
+            const barBg = document.createElement('div');
+            barBg.className = 'w-full h-2.5 bg-discord-element rounded-full overflow-hidden border border-discord-divider/50 shadow-inner';
+            
+            const barFill = document.createElement('div');
+            barFill.className = 'h-full bg-gradient-to-r from-discord-brand via-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out relative';
+            barFill.style.width = `${percent}%`;
+            barFill.style.boxShadow = '0 0 10px rgba(88, 101, 242, 0.6)';
+            
+            barBg.appendChild(barFill);
+            container.appendChild(labelDiv);
+            container.appendChild(barBg);
+            
+            return container;
+        };
+
+        const formatLogLine = (line) => {
+            // Check if this is a progress line
+            if (line.startsWith('PROGRESS:')) {
+                return null; // Will be handled separately
+            }
+            
+            // Add icons to common log patterns
+            line = line.replace(/^Receiving upload\.\.\./, '<span class="text-blue-400"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Receiving upload...</span>');
+            line = line.replace(/^Saved (\d+) file\(s\)\./, '<span class="text-green-400"><i class="fa-solid fa-check-circle mr-2"></i>Saved $1 file(s).</span>');
+            line = line.replace(/^Starting Discord upload\.\.\./, '<span class="text-discord-brand"><i class="fa-solid fa-rocket mr-2 fa-fade"></i>Starting Discord upload...</span>');
+            line = line.replace(/^Upload complete\./, '<span class="text-green-400"><i class="fa-solid fa-circle-check mr-2"></i>Upload complete.</span>');
+            line = line.replace(/^Restoring batch to (.+)\.\.\./, '<span class="text-blue-400"><i class="fa-solid fa-download mr-2 fa-beat"></i>Restoring batch to $1...</span>');
+            line = line.replace(/Batch ID: ([A-Z0-9_]+)/, 'Batch ID: <span class="text-discord-brand font-bold">$1</span>');
+            
+            return line;
+        };
+
+        const createInteractiveResult = (result, jobType) => {
+            const container = document.createElement('div');
+            container.className = 'mt-2 mb-2';
+            
+            const header = document.createElement('div');
+            header.className = 'text-green-400 font-bold mb-2';
+            header.innerHTML = '<i class="fa-solid fa-circle-check mr-2 fa-bounce"></i>SUCCESS RESULT:';
+            container.appendChild(header);
+            
+            const resultBox = document.createElement('div');
+            resultBox.className = 'bg-discord-sidebar border border-green-500/30 rounded-lg p-3 space-y-2 animate-fade-in';
+            
+            if (jobType === 'download' && result.restored_path) {
+                // Make download path clickable
+                const pathItem = document.createElement('div');
+                pathItem.className = 'flex items-start gap-2';
+                pathItem.innerHTML = `
+                    <span class="text-discord-light text-sm">restored_path:</span>
+                    <button class="text-discord-brand hover:text-blue-300 underline text-sm font-mono break-all text-left transition-colors group flex items-center gap-1" onclick="openFolderInFinder('${escapeHtml(result.restored_path)}')">
+                        <i class="fa-solid fa-folder-open mr-1 group-hover:scale-110 transition-transform"></i>
+                        "${escapeHtml(result.restored_path)}"
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-xs opacity-50 group-hover:opacity-100"></i>
+                    </button>
+                `;
+                resultBox.appendChild(pathItem);
+            } else {
+                // Display all result fields with icons
+                Object.entries(result).forEach(([key, value]) => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-start gap-2';
+                    
+                    let icon = 'fa-circle-info';
+                    if (key.includes('id')) icon = 'fa-fingerprint';
+                    if (key.includes('path')) icon = 'fa-folder';
+                    if (key.includes('batch')) icon = 'fa-layer-group';
+                    
+                    const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+                    item.innerHTML = `
+                        <i class="fa-solid ${icon} text-discord-brand text-xs mt-1"></i>
+                        <span class="text-discord-light text-sm">${escapeHtml(key)}:</span>
+                        <span class="text-white text-sm font-mono break-all">"${escapeHtml(String(displayValue))}"</span>
+                    `;
+                    resultBox.appendChild(item);
+                });
+            }
+            
+            container.appendChild(resultBox);
+            return container;
         };
 
         const refreshJob = async () => {
@@ -711,26 +1178,87 @@
                 const data = await res.json();
                 
                 let statusColor = 'text-discord-light';
-                if(data.status === 'complete') statusColor = 'text-green-400';
-                if(data.status === 'failed') statusColor = 'text-red-400';
-                if(data.status === 'running') statusColor = 'text-discord-brand';
+                let statusIcon = 'fa-circle';
+                if(data.status === 'complete') {
+                    statusColor = 'text-green-400';
+                    statusIcon = 'fa-circle-check';
+                }
+                if(data.status === 'failed') {
+                    statusColor = 'text-red-400';
+                    statusIcon = 'fa-circle-xmark';
+                }
+                if(data.status === 'running') {
+                    statusColor = 'text-discord-brand';
+                    statusIcon = 'fa-circle-notch fa-spin';
+                }
 
-                jobSummary.innerHTML = `<span class="${statusColor}"><i class="fa-solid fa-circle text-[8px] mr-2"></i>${data.type.toUpperCase()} • ${data.status.toUpperCase()}</span>`;
+                jobSummary.innerHTML = `<span class="${statusColor}"><i class="fa-solid ${statusIcon} mr-2"></i>${data.type.toUpperCase()} • ${data.status.toUpperCase()}</span>`;
                 
+                // Clear and rebuild logs container
+                jobLogs.innerHTML = '';
+                
+                let lastProgressBar = null;
+                let latestProgressInfo = null;
+                
+                // Process logs and extract progress info
                 const logs = (data.logs || []).slice();
-                if (data.error) {
-                    logs.push(`❌ CRITICAL ERROR: ${data.error}`);
-                }
-                if (data.result) {
-                    logs.push(`✅ SUCCESS RESULT: ${JSON.stringify(data.result, null, 2)}`);
+                const nonProgressLogs = [];
+                
+                logs.forEach((log, index) => {
+                    if (log.startsWith('PROGRESS:')) {
+                        // Parse progress: PROGRESS:percent:message
+                        const parts = log.split(':');
+                        if (parts.length >= 3) {
+                            latestProgressInfo = {
+                                percent: parseInt(parts[1]),
+                                message: parts.slice(2).join(':')
+                            };
+                        }
+                    } else {
+                        nonProgressLogs.push(log);
+                    }
+                });
+                
+                // Render non-progress logs
+                nonProgressLogs.forEach(log => {
+                    const formatted = formatLogLine(escapeHtml(log));
+                    if (formatted) {
+                        const logLine = document.createElement('div');
+                        logLine.className = 'mb-1 animate-fade-in';
+                        logLine.innerHTML = formatted;
+                        jobLogs.appendChild(logLine);
+                    }
+                });
+                
+                // Add or update progress bar if we have progress info
+                if (latestProgressInfo && data.status === 'running') {
+                    lastProgressBar = createProgressBar(latestProgressInfo.percent, latestProgressInfo.message, data.type);
+                    jobLogs.appendChild(lastProgressBar);
                 }
                 
-                jobLogs.textContent = logs.join('\n');
+                // Add error with animation
+                if (data.error) {
+                    const errorLine = document.createElement('div');
+                    errorLine.className = 'text-red-400 font-bold mt-2 animate-fade-in';
+                    errorLine.innerHTML = `<i class="fa-solid fa-circle-xmark mr-2 fa-beat"></i>CRITICAL ERROR: ${escapeHtml(data.error)}`;
+                    jobLogs.appendChild(errorLine);
+                }
+                
+                // Add interactive result
+                if (data.result) {
+                    const resultElement = createInteractiveResult(data.result, data.type);
+                    jobLogs.appendChild(resultElement);
+                }
+                
                 jobProgress.style.width = `${data.progress || 0}%`;
                 jobLogs.scrollTop = jobLogs.scrollHeight;
                 
                 if (data.status === 'complete' || data.status === 'failed') {
                     clearInterval(jobTimer);
+                    // Remove progress bar on completion
+                    const progressBars = jobLogs.querySelectorAll('[data-progress-type="bar"]');
+                    progressBars.forEach(bar => bar.remove());
+                    
                     if(data.status === 'complete') {
                         loadStats();
                         loadBatches();
@@ -745,14 +1273,29 @@
             try {
                 const res = await fetch('/api/stats');
                 const stats = await res.json();
-                document.getElementById('stat-batches').textContent = stats.batch_count ?? '--';
-                document.getElementById('stat-total').textContent = formatBytes(stats.total_size);
-                document.getElementById('stat-compressed').textContent = formatBytes(stats.compressed_size);
-                document.getElementById('stat-chunks').textContent = stats.chunk_count ?? '--';
-            } catch (e) { console.log("Stats load error"); }
+                
+                const statBatches = document.getElementById('stat-batches');
+                const statTotal = document.getElementById('stat-total');
+                const statCompressed = document.getElementById('stat-compressed');
+                const statChunks = document.getElementById('stat-chunks');
+                
+                // Remove skeleton loading
+                [statBatches, statTotal, statCompressed, statChunks].forEach(el => {
+                    if (el) el.classList.remove('skeleton');
+                });
+                
+                statBatches.textContent = stats.batch_count ?? '--';
+                statTotal.textContent = formatBytes(stats.total_size);
+                statCompressed.textContent = formatBytes(stats.compressed_size);
+                statChunks.textContent = stats.chunk_count ?? '--';
+                
+                updateLastUpdatedTime();
+            } catch (e) { 
+                console.log("Stats load error"); 
+                showToast('Failed to load statistics', 'error');
+            }
         };
 
-        const globalSearchInput = document.getElementById('global-search');
         const batchSearchInput = document.getElementById('batch-search');
         let globalSearchTerm = '';
         let batchSearchTerm = '';
@@ -876,156 +1419,21 @@
             batchView = view;
             updateBatchViewToggle(view);
             renderBatches();
-        };
-
-        const toDayKey = (date) => {
-            const local = new Date(date);
-            if (Number.isNaN(local.getTime())) return null;
-            return local.toLocaleDateString('en-CA');
-        };
-
-        const getLastNDays = (count) => {
-            const days = [];
-            const now = new Date();
-            for (let i = count - 1; i >= 0; i -= 1) {
-                const day = new Date(now);
-                day.setDate(now.getDate() - i);
-                days.push(day);
+            
+            // Save preference to localStorage
+            try {
+                localStorage.setItem('disbucket_batch_view', view);
+            } catch (e) {
+                console.log('LocalStorage not available');
             }
-            return days;
-        };
-
-        const renderInsights = () => {
-            const volumeTotal = document.getElementById('upload-volume-total');
-            const volumeTrend = document.getElementById('upload-volume-trend');
-            const volumeBars = document.getElementById('upload-volume-bars');
-            const volumeLabels = document.getElementById('upload-volume-labels');
-            const growthTotal = document.getElementById('storage-growth-total');
-            const growthTrend = document.getElementById('storage-growth-trend');
-            const growthLine = document.getElementById('storage-growth-line');
-            const growthArea = document.getElementById('storage-growth-area');
-            const growthLabels = document.getElementById('storage-growth-labels');
-
-            if (!volumeTotal || !volumeTrend || !volumeBars || !volumeLabels
-                || !growthTotal || !growthTrend || !growthLine || !growthArea || !growthLabels) {
-                return;
+            
+            // Update aria-pressed
+            const gridBtn = document.getElementById('batch-view-grid');
+            const listBtn = document.getElementById('batch-view-list');
+            if (gridBtn && listBtn) {
+                gridBtn.setAttribute('aria-pressed', view === 'grid');
+                listBtn.setAttribute('aria-pressed', view === 'list');
             }
-
-            const rawDates = (allBatches || [])
-                .map((batch) => toDayKey(batch.upload_date))
-                .filter(Boolean);
-            const uniqueKeys = Array.from(new Set(rawDates)).sort();
-            const dayKeys = (uniqueKeys.length ? uniqueKeys.slice(-7) : getLastNDays(7).map((day) => toDayKey(day)));
-            const days = dayKeys.map((key) => new Date(key));
-            const byDay = dayKeys.reduce((acc, key) => {
-                acc[key] = { batches: 0, size: 0 };
-                return acc;
-            }, {});
-
-            (allBatches || []).forEach((batch) => {
-                const key = toDayKey(batch.upload_date);
-                if (!key || !(key in byDay)) return;
-                byDay[key].batches += 1;
-                byDay[key].size += Number(batch.total_size || 0);
-            });
-
-            const dailyBatches = dayKeys.map((key) => byDay[key].batches);
-            const dailySize = dayKeys.map((key) => byDay[key].size);
-            const totalBatches = dailyBatches.reduce((sum, val) => sum + val, 0);
-            const totalSize = dailySize.reduce((sum, val) => sum + val, 0);
-            const cumulativeSize = dailySize.reduce((acc, value, index) => {
-                const nextValue = value + (acc[index - 1] || 0);
-                acc.push(nextValue);
-                return acc;
-            }, []);
-
-            volumeTotal.textContent = `${totalBatches} batches`;
-            growthTotal.textContent = `+${formatBytes(totalSize)}`;
-
-            const prevDays = uniqueKeys.length > 7 ? uniqueKeys.slice(-14, -7) : [];
-            const prevBatches = (allBatches || []).reduce((sum, batch) => {
-                const key = toDayKey(batch.upload_date);
-                if (!key || !prevDays.includes(key)) return sum;
-                return sum + 1;
-            }, 0);
-            const prevSize = (allBatches || []).reduce((sum, batch) => {
-                const key = toDayKey(batch.upload_date);
-                if (!key || !prevDays.includes(key)) return sum;
-                return sum + Number(batch.total_size || 0);
-            }, 0);
-
-            const formatTrend = (current, previous, positiveClass, negativeClass) => {
-                if (!previous) {
-                    if (current > 0) {
-                        return { text: '+100%', className: positiveClass };
-                    }
-                    return { text: '0%', className: 'text-discord-light bg-discord-bg/60 border border-discord-divider/60' };
-                }
-                const delta = ((current - previous) / previous) * 100;
-                const sign = delta >= 0 ? '+' : '';
-                return {
-                    text: `${sign}${delta.toFixed(0)}%`,
-                    className: delta >= 0 ? positiveClass : negativeClass,
-                };
-            };
-
-            const volumeTrendInfo = formatTrend(
-                totalBatches,
-                prevBatches,
-                'text-green-400 bg-green-500/10 border border-green-500/20',
-                'text-red-400 bg-red-500/10 border border-red-500/20',
-            );
-            volumeTrend.textContent = volumeTrendInfo.text;
-            volumeTrend.className = `text-xs font-mono px-2 py-1 rounded-full ${volumeTrendInfo.className}`;
-
-            const growthTrendInfo = formatTrend(
-                totalSize,
-                prevSize,
-                'text-green-400 bg-green-500/10 border border-green-500/20',
-                'text-red-400 bg-red-500/10 border border-red-500/20',
-            );
-            growthTrend.textContent = growthTrendInfo.text;
-            growthTrend.className = `text-xs font-mono px-2 py-1 rounded-full ${growthTrendInfo.className}`;
-
-            const maxBatches = Math.max(1, ...dailyBatches);
-            volumeBars.innerHTML = '';
-            dailyBatches.forEach((count, index) => {
-                const height = Math.max(10, Math.round((count / maxBatches) * 96));
-                const bar = document.createElement('div');
-                const tint = index >= 4 ? 'bg-purple-500/60' : 'bg-discord-brand/60';
-                bar.className = `w-6 rounded-lg ${tint}`;
-                bar.style.height = `${height}px`;
-                bar.title = `${count} batches`;
-                volumeBars.appendChild(bar);
-            });
-
-            volumeLabels.innerHTML = '';
-            days.forEach((day) => {
-                const label = document.createElement('span');
-                label.textContent = day.toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: '2-digit',
-                });
-                volumeLabels.appendChild(label);
-            });
-
-            const maxSize = Math.max(1, ...cumulativeSize);
-            const points = cumulativeSize.map((value, index) => {
-                const x = 5 + (index * (190 / 6));
-                const y = 50 - (value / maxSize) * 38;
-                return `${x.toFixed(1)} ${y.toFixed(1)}`;
-            });
-            const linePath = `M${points[0]} ` + points.slice(1).map((point) => `L${point}`).join(' ');
-            growthLine.setAttribute('d', linePath);
-            growthArea.setAttribute('d', `${linePath} L195 60 L5 60 Z`);
-
-            growthLabels.innerHTML = '';
-            const labelValues = [0, maxSize * 0.33, maxSize * 0.66, maxSize];
-            labelValues.forEach((value) => {
-                const label = document.createElement('span');
-                label.textContent = formatBytes(Math.round(value));
-                growthLabels.appendChild(label);
-            });
         };
 
         const getStatusBadge = (status) => {
@@ -1049,27 +1457,33 @@
                 const row = document.createElement('tr');
                 row.className = 'group hover:bg-discord-hover/50 transition-colors cursor-pointer';
                 row.dataset.batchId = batch.batch_id;
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-expanded', 'false');
+                row.setAttribute('tabindex', '0');
 
                 const statusBadge = getStatusBadge(batch.status);
 
                 row.innerHTML = `
+                    <td class="px-4 py-4 text-discord-light group-hover:text-white transition-colors">
+                        <i class="fa-solid fa-chevron-right text-xs transition-transform chevron-icon" aria-hidden="true"></i>
+                    </td>
                     <td class="px-6 py-4 font-mono text-xs text-discord-light group-hover:text-white transition-colors">
-                        <span class="opacity-70">#</span>${batch.batch_id}
+                        <span class="opacity-70">#</span>${escapeHtml(batch.batch_id)}
                     </td>
                     <td class="px-6 py-4 font-bold text-white flex items-center gap-3">
                         <div class="w-8 h-8 rounded bg-discord-element flex items-center justify-center text-discord-brand">
-                            <i class="fa-solid fa-file-zipper"></i>
+                            <i class="fa-solid fa-file-zipper" aria-hidden="true"></i>
                         </div>
-                        ${batch.original_name}
+                        ${escapeHtml(batch.original_name)}
                     </td>
                     <td class="px-6 py-4 text-discord-light font-mono text-xs">${formatBytes(batch.total_size)}</td>
-                    <td class="px-6 py-4 text-discord-light font-mono text-xs">${formatDate(batch.upload_date)}</td>
+                    <td class="px-6 py-4 text-discord-light font-mono text-xs hidden lg:table-cell">${formatDate(batch.upload_date)}</td>
                     <td class="px-6 py-4">${statusBadge}</td>
                     <td class="px-6 py-4 text-right">
-                        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-discord-brand text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Download" data-action="download" data-id="${batch.batch_id}"><i class="fa-solid fa-download"></i></button>
-                            <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-green-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Verify" data-action="verify" data-id="${batch.batch_id}"><i class="fa-solid fa-check"></i></button>
-                            <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-red-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Delete" data-action="delete" data-id="${batch.batch_id}"><i class="fa-solid fa-trash"></i></button>
+                        <div class="flex items-center justify-end gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-discord-brand text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Download" aria-label="Download batch ${escapeHtml(batch.batch_id)}" data-action="download" data-id="${escapeHtml(batch.batch_id)}"><i class="fa-solid fa-download" aria-hidden="true"></i></button>
+                            <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-green-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Verify" aria-label="Verify batch ${escapeHtml(batch.batch_id)}" data-action="verify" data-id="${escapeHtml(batch.batch_id)}"><i class="fa-solid fa-check" aria-hidden="true"></i></button>
+                            <button class="w-8 h-8 rounded-full bg-discord-element hover:bg-red-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Delete" aria-label="Delete batch ${escapeHtml(batch.batch_id)}" data-action="delete" data-id="${escapeHtml(batch.batch_id)}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                         </div>
                     </td>
                 `;
@@ -1079,9 +1493,10 @@
                 const title = escapeHtml(batch.title || '—');
                 const tags = escapeHtml(batch.tags || '—');
                 const description = escapeHtml(batch.description || '—');
+                const channel = batch.storage_channel_name ? `<i class="fa-solid fa-hashtag mr-1"></i>${escapeHtml(batch.storage_channel_name)}` : '—';
                 detailsRow.innerHTML = `
                     <td colspan="6" class="px-6 py-4">
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm">
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm">
                             <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
                                 <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Title</div>
                                 <div class="text-white font-semibold break-words">${title}</div>
@@ -1089,6 +1504,10 @@
                             <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
                                 <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Tags</div>
                                 <div class="text-discord-light break-words">${tags}</div>
+                            </div>
+                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
+                                <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Storage Channel</div>
+                                <div class="text-discord-brand break-words">${channel}</div>
                             </div>
                             <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
                                 <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Description</div>
@@ -1112,6 +1531,7 @@
                 const title = escapeHtml(batch.title || '—');
                 const tags = escapeHtml(batch.tags || '—');
                 const description = escapeHtml(batch.description || '—');
+                const channel = batch.storage_channel_name ? `<i class="fa-solid fa-hashtag mr-1"></i>${escapeHtml(batch.storage_channel_name)}` : '—';
                 const statusBadge = getStatusBadge(batch.status);
 
                 card.innerHTML = `
@@ -1147,6 +1567,10 @@
                             <div class="text-discord-light break-words">${tags}</div>
                         </div>
                         <div>
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Storage Channel</div>
+                            <div class="text-discord-brand break-words">${channel}</div>
+                        </div>
+                        <div>
                             <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Description</div>
                             <div class="text-discord-light break-words">${description}</div>
                         </div>
@@ -1165,7 +1589,19 @@
             const emptyState = document.getElementById('empty-state');
             const tableContainer = document.getElementById('batch-table-container');
             const grid = document.getElementById('batch-grid');
+            const batchCount = document.getElementById('batch-count');
             const batchesToRender = getFilteredBatches();
+
+            // Update batch count
+            if (batchCount) {
+                const total = allBatches.length;
+                const filtered = batchesToRender.length;
+                if (total === filtered) {
+                    batchCount.textContent = `${total} ${total === 1 ? 'batch' : 'batches'}`;
+                } else {
+                    batchCount.textContent = `${filtered} of ${total}`;
+                }
+            }
 
             if (!batchesToRender || batchesToRender.length === 0) {
                 emptyState.classList.remove('hidden');
@@ -1193,15 +1629,49 @@
                 allBatches = Array.isArray(batches) ? batches : [];
                 renderBatches();
                 renderActivity();
-                renderInsights();
             } catch (e) { console.log("Batches load error"); }
         };
 
+        const loadChannels = async () => {
+            try {
+                const res = await fetch('/api/channels');
+                const data = await res.json();
+                const channelSelect = document.getElementById('upload-channel');
+                
+                // Clear existing options except the first (Auto)
+                channelSelect.innerHTML = '<option value="">Auto (Round-Robin Distribution)</option>';
+                
+                // Add channels from config
+                if (data.channels && Array.isArray(data.channels)) {
+                    data.channels.forEach(channel => {
+                        const option = document.createElement('option');
+                        option.value = channel;
+                        option.textContent = channel;
+                        channelSelect.appendChild(option);
+                    });
+                }
+            } catch (e) { 
+                console.log("Channels load error", e); 
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
+            // Restore batch view preference from localStorage
+            try {
+                const savedView = localStorage.getItem('disbucket_batch_view');
+                if (savedView === 'grid' || savedView === 'list') {
+                    batchView = savedView;
+                }
+            } catch (e) {
+                console.log('LocalStorage not available');
+            }
+            
             switchView('dashboard');
             loadStats();
             loadBatches();
+            loadChannels();
             updateBatchViewToggle(batchView);
+            updateLastUpdatedTime();
         });
 
         if (globalSearchInput) {
@@ -1245,10 +1715,20 @@
         document.getElementById('refresh-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-btn');
             const icon = btn.querySelector('i');
+            btn.disabled = true;
             icon.classList.add('fa-spin');
-            await loadStats();
-            await loadBatches();
-            setTimeout(() => icon.classList.remove('fa-spin'), 500);
+            
+            try {
+                await Promise.all([loadStats(), loadBatches()]);
+                showToast('Data refreshed successfully', 'success');
+            } catch (e) {
+                showToast('Failed to refresh data', 'error');
+            } finally {
+                setTimeout(() => {
+                    icon.classList.remove('fa-spin');
+                    btn.disabled = false;
+                }, 500);
+            }
         });
 
         const getFolderRootName = (files) => {
@@ -1262,10 +1742,20 @@
             event.preventDefault();
             const fileInput = document.getElementById('upload-file');
             const titleInput = document.getElementById('upload-title');
+            const submitBtn = document.getElementById('submit-upload-btn');
+            const submitIcon = submitBtn.querySelector('i');
+            const submitText = submitBtn.querySelector('span');
+            
             if (!fileInput.files.length) {
-                alert('Please select a file or folder to upload.');
+                showToast('Please select a file or folder to upload', 'warning');
                 return;
             }
+            
+            // Add loading state
+            submitBtn.disabled = true;
+            submitIcon.className = 'fa-solid fa-spinner fa-spin';
+            submitText.textContent = 'Uploading...';
+            
             const formData = new FormData();
             Array.from(fileInput.files).forEach((file) => {
                 formData.append('files', file);
@@ -1281,19 +1771,46 @@
             formData.append('title', document.getElementById('upload-title').value);
             formData.append('tags', document.getElementById('upload-tags').value);
             formData.append('description', document.getElementById('upload-description').value);
+            formData.append('channel', document.getElementById('upload-channel').value);
             formData.append('confirm', document.getElementById('upload-confirm').checked);
             
             try {
                 const res = await fetch('/api/jobs/upload', { method: 'POST', body: formData });
                 const data = await res.json();
+                showToast('Upload job started successfully', 'success');
                 startJob(data.job_id);
-            } catch(e) { alert("Upload failed to start."); }
+            } catch(e) { 
+                showToast('Upload failed to start', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitIcon.className = 'fa-solid fa-rocket';
+                submitText.textContent = 'Start Upload';
+            }
         });
 
         const toggleBatchDetails = (batchId) => {
             const detailsRow = document.querySelector(`tr[data-batch-details="${batchId}"]`);
+            const mainRow = document.querySelector(`tr[data-batch-id="${batchId}"]`);
             if (!detailsRow) return;
+            
+            const isExpanded = !detailsRow.classList.contains('hidden');
             detailsRow.classList.toggle('hidden');
+            
+            // Update chevron rotation
+            const chevron = mainRow?.querySelector('.chevron-icon');
+            if (chevron) {
+                if (isExpanded) {
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    chevron.style.transform = 'rotate(90deg)';
+                }
+            }
+            
+            // Update aria-expanded
+            if (mainRow) {
+                mainRow.setAttribute('aria-expanded', !isExpanded);
+            }
         };
 
         const handleBatchAction = async (action, batchId) => {
@@ -1305,6 +1822,7 @@
                         body: JSON.stringify({ batch_id: batchId })
                     });
                     const data = await res.json();
+                    showToast('Download job started', 'info');
                     startJob(data.job_id);
                 }
                 else if (action === 'verify') {
@@ -1314,6 +1832,7 @@
                         body: JSON.stringify({ batch_id: batchId })
                     });
                     const data = await res.json();
+                    showToast('Verification job started', 'info');
                     startJob(data.job_id);
                 }
                 else if (action === 'delete') {
@@ -1326,14 +1845,19 @@
                         body: JSON.stringify({ batch_id: batchId, delete_remote: deleteRemote })
                     });
                     const data = await res.json();
+                    showToast('Delete job started', 'info');
                     startJob(data.job_id);
                 }
-            } catch(e) { console.error("Action failed", e); }
+            } catch(e) { 
+                console.error("Action failed", e);
+                showToast('Action failed to start', 'error');
+            }
         };
 
-        document.getElementById('batch-table').addEventListener('click', async (event) => {
+        const handleTableInteraction = async (event) => {
             const button = event.target.closest('button');
             if (button) {
+                event.stopPropagation();
                 const action = button.dataset.action;
                 const batchId = button.dataset.id;
 
@@ -1346,6 +1870,16 @@
             const row = event.target.closest('tr');
             if (!row || !row.dataset.batchId) return;
             toggleBatchDetails(row.dataset.batchId);
+        };
+        
+        document.getElementById('batch-table').addEventListener('click', handleTableInteraction);
+        
+        // Keyboard support for batch table rows
+        document.getElementById('batch-table').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleTableInteraction(event);
+            }
         });
 
         document.getElementById('batch-grid').addEventListener('click', async (event) => {
@@ -1380,6 +1914,14 @@
         bindAction('backup-upload-btn', '/api/jobs/backup', { upload_to_discord: true });
 
         updateUploadMode();
+        
+        // Add notification container for better toast positioning
+        const notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = 'fixed top-24 right-4 lg:right-8 z-50 flex flex-col gap-2 pointer-events-none';
+        notificationContainer.setAttribute('aria-live', 'polite');
+        notificationContainer.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(notificationContainer);
     </script>
 </body>
 </html>

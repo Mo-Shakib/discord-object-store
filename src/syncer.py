@@ -17,7 +17,7 @@ from .utils import StorageBotError
 
 
 BATCH_ID_RE = re.compile(r"Batch ID:\s*`([^`]+)`")
-THREAD_ID_RE = re.compile(r"Thread ID:\s*`([^`]+)`")
+THREAD_ID_RE = re.compile(r"Thread:\s*`([^`]+)`")  # Fixed: matches "Thread:" not "Thread ID:"
 PART_RE = re.compile(r"\.part(\d+)$")
 
 
@@ -86,11 +86,14 @@ async def sync_from_discord(reset_db: bool = False) -> int:
             if not client.guilds:
                 raise StorageBotError("Bot is not connected to any guild.")
             guild = client.guilds[0]
+            print(f"✓ Connected to guild: {guild.name}")
             index_channel = discord.utils.get(
                 guild.text_channels, name=config.batch_index_channel_name
             )
             if index_channel is None:
-                raise StorageBotError("Batch index channel not found.")
+                raise StorageBotError(f"Batch index channel '{config.batch_index_channel_name}' not found.")
+            print(f"✓ Found index channel: #{index_channel.name}")
+            print("✓ Scanning for batches...")
 
             async for message in index_channel.history(limit=None, oldest_first=True):
                 match = BATCH_ID_RE.search(message.content or "")
@@ -101,10 +104,17 @@ async def sync_from_discord(reset_db: bool = False) -> int:
                     continue
                 thread_id_match = THREAD_ID_RE.search(message.content or "")
                 if not thread_id_match:
+                    print(f"⚠️  Warning: Could not find thread ID for batch {batch_id}. Skipping.")
                     continue
-                thread_id = int(thread_id_match.group(1))
-                thread = client.get_channel(thread_id) or await client.fetch_channel(thread_id)
-                if not isinstance(thread, discord.Thread):
+                
+                try:
+                    thread_id = int(thread_id_match.group(1))
+                    thread = client.get_channel(thread_id) or await client.fetch_channel(thread_id)
+                    if not isinstance(thread, discord.Thread):
+                        print(f"⚠️  Warning: Thread {thread_id} not found or not a thread. Skipping batch {batch_id}.")
+                        continue
+                except (ValueError, discord.NotFound, discord.Forbidden) as e:
+                    print(f"⚠️  Warning: Could not access thread for batch {batch_id}: {e}. Skipping.")
                     continue
 
                 meta, attachments = await _collect_thread_data(thread)
@@ -165,7 +175,9 @@ async def sync_from_discord(reset_db: bool = False) -> int:
                     )
 
                 synced += 1
+                print(f"✓ Synced batch {batch_id} ({synced} batches total)")
 
+            print(f"\n✓ Sync complete! Total batches synced: {synced}")
             done.set_result(synced)
         except Exception as exc:
             done.set_exception(exc)

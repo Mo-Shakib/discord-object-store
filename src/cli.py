@@ -28,6 +28,8 @@ from .uploader import resume_upload, upload
 from .downloader import download
 from .utils import StorageBotError, format_bytes
 from .syncer import sync_from_discord
+import aiohttp
+import aiofiles
 
 
 def _cli_header() -> str:
@@ -54,10 +56,12 @@ def _command_showcase() -> List[Tuple[str, str, str]]:
         ("info <batch_id>", "Batch details", "Inspect batch metadata."),
         ("delete <batch_id>", "Delete metadata", "Remove local + optional remote."),
         ("stats", "Storage statistics", "Quick usage summary."),
+        ("channels", "List storage channels", "Show channel distribution."),
         ("verify <batch_id>", "Verify integrity", "Re-hash chunks and compare."),
         ("resume <batch_id>", "Resume upload", "Continue interrupted upload."),
         ("backup", "Backup database", "Create/upload DB backup."),
-        ("sync [--reset]", "Sync from Discord", "Rebuild DB from Discord."),
+        ("restore [--backup-file]", "Restore database", "Download DB from Discord."),
+        ("sync [--reset]", "Sync from Discord", "Rebuild DB from messages."),
     ]
 
 
@@ -71,7 +75,8 @@ def _print_command_help(title: str) -> None:
     print("\nExamples:")
     print("  python bot.py upload ./my-folder")
     print("  python bot.py download BATCH_20240101_ABCD ./downloads")
-    print("  python bot.py sync --reset")
+    print("  python bot.py restore                    # Restore latest backup from Discord")
+    print("  python bot.py sync --reset               # Rebuild database from messages")
     print("")
 
 
@@ -95,6 +100,7 @@ def parse_arguments() -> argparse.Namespace:
     upload_parser = subparsers.add_parser("upload", help="Upload file/folder")
     upload_parser.add_argument("path", help="Path to file or folder")
     upload_parser.add_argument("--yes", action="store_true", help="Skip confirmation")
+    upload_parser.add_argument("--channel", type=str, help="Specific storage channel to use (default: auto round-robin)")
 
     download_parser = subparsers.add_parser("download", help="Download batch")
     download_parser.add_argument("batch_id", help="Batch ID")
@@ -109,6 +115,8 @@ def parse_arguments() -> argparse.Namespace:
     delete_parser.add_argument("batch_id", help="Batch ID")
 
     subparsers.add_parser("stats", help="Storage statistics")
+    
+    subparsers.add_parser("channels", help="List storage channels and their usage")
 
     verify_parser = subparsers.add_parser("verify", help="Verify batch integrity")
     verify_parser.add_argument("batch_id", help="Batch ID")
@@ -123,6 +131,11 @@ def parse_arguments() -> argparse.Namespace:
         "--reset", action="store_true", help="Reset local database before syncing"
     )
 
+    restore_parser = subparsers.add_parser("restore", help="Restore database from Discord backup")
+    restore_parser.add_argument(
+        "--backup-file", type=str, help="Specific backup filename to restore (default: latest)"
+    )
+
     subparsers.add_parser("help", help="Show help and usage examples")
 
     return parser.parse_args()
@@ -132,7 +145,37 @@ def command_upload(args: argparse.Namespace) -> None:
     """
     Handle upload command.
     """
-    batch_id = asyncio.run(upload(args.path, confirm=not args.yes))
+    # Show available channels if user wants to choose
+    if hasattr(args, 'channel') and args.channel:
+        channel_name = args.channel
+    else:
+        # Optionally show available channels
+        config = Config.get_instance()
+        available_channels = config.get_storage_channels()
+        
+        if len(available_channels) > 1 and not args.yes:
+            print(f"\n{Fore.CYAN}Available Storage Channels:{Style.RESET_ALL}")
+            print(f"  {'0.':<4} {'Auto (Round-robin)':<30} {Fore.YELLOW}[Default]{Style.RESET_ALL}")
+            for i, channel in enumerate(available_channels, 1):
+                print(f"  {f'{i}.':<4} #{channel}")
+            
+            choice = input(f"\n{Fore.CYAN}Select channel (0-{len(available_channels)}, Enter for auto):{Style.RESET_ALL} ").strip()
+            
+            if choice and choice.isdigit():
+                choice_num = int(choice)
+                if 1 <= choice_num <= len(available_channels):
+                    channel_name = available_channels[choice_num - 1]
+                    print(f"✓ Selected: #{channel_name}")
+                else:
+                    channel_name = None
+                    print(f"✓ Using auto selection (round-robin)")
+            else:
+                channel_name = None
+                print(f"✓ Using auto selection (round-robin)")
+        else:
+            channel_name = None
+    
+    batch_id = asyncio.run(upload(args.path, confirm=not args.yes, channel=channel_name))
     print(f"{Fore.GREEN}✅ Upload complete! Batch ID: {batch_id}{Style.RESET_ALL}")
 
 
@@ -215,6 +258,52 @@ def command_stats(_: argparse.Namespace) -> None:
     print(f"Total chunks: {stats['chunk_count']}")
 
 
+def command_channels(_: argparse.Namespace) -> None:
+    """
+    Handle channels command - show storage channel usage.
+    """
+    from collections import defaultdict
+    
+    # Get configured channels
+    config = Config.get_instance()
+    configured_channels = config.get_storage_channels()
+    
+    print(f"{Fore.CYAN}📡 Storage Channels{Style.RESET_ALL}")
+    print("=" * 60)
+    print(f"\n{Fore.YELLOW}Configured Channels:{Style.RESET_ALL}")
+    for i, channel in enumerate(configured_channels, 1):
+        print(f"  {i}. #{channel}")
+    
+    # Get usage statistics from database
+    batches = list_batches()
+    channel_stats = defaultdict(lambda: {"count": 0, "size": 0})
+    no_channel_count = 0
+    
+    for batch in batches:
+        channel_name = batch.get("storage_channel_name") or "unknown"
+        if channel_name == "unknown":
+            no_channel_count += 1
+        channel_stats[channel_name]["count"] += 1
+        channel_stats[channel_name]["size"] += batch.get("total_size", 0)
+    
+    if channel_stats:
+        print(f"\n{Fore.YELLOW}Channel Usage:{Style.RESET_ALL}")
+        print(f"{'Channel':<30}  {'Batches':>10}  {'Total Size':>15}")
+        print("-" * 60)
+        
+        for channel, stats in sorted(channel_stats.items(), key=lambda x: x[1]["count"], reverse=True):
+            color = Fore.GREEN if channel in configured_channels else Fore.RED
+            print(f"{color}#{channel:<29}{Style.RESET_ALL}  {stats['count']:>10}  {format_bytes(stats['size']):>15}")
+        
+        if no_channel_count > 0:
+            print(f"\n{Fore.YELLOW}Note: {no_channel_count} batch(es) don't have channel info (uploaded before multi-channel support).{Style.RESET_ALL}")
+    else:
+        print(f"\n{Fore.YELLOW}No batches found.{Style.RESET_ALL}")
+    
+    print(f"\n{Fore.CYAN}Tip:{Style.RESET_ALL} To add more storage channels, edit STORAGE_CHANNEL_NAME in .env")
+    print(f"      Use comma-separated values: STORAGE_CHANNEL_NAME=channel1,channel2,channel3")
+
+
 async def _verify_batch(batch_id: str) -> None:
     batch = get_batch(batch_id)
     if not batch:
@@ -292,6 +381,37 @@ def command_sync(args: argparse.Namespace) -> None:
     print(f"{Fore.GREEN}✅ Synced {count} batches from Discord.{Style.RESET_ALL}")
 
 
+def command_restore(args: argparse.Namespace) -> None:
+    """
+    Handle restore command.
+    """
+    print(f"{Fore.YELLOW}⚠️  This will replace your local database with a backup from Discord.{Style.RESET_ALL}")
+    confirm = input("Continue? [y/N]: ").strip().lower()
+    if confirm != "y":
+        print("Restore cancelled.")
+        return
+    
+    restored_path = asyncio.run(_restore_database_from_discord(args.backup_file))
+    
+    # Reinitialize database connection after restore
+    from .database import init_database
+    init_database()
+    
+    # Show what was restored
+    batches = list_batches()
+    print(f"\n{Fore.GREEN}✅ Database restored successfully!{Style.RESET_ALL}")
+    print(f"Database location: {restored_path}")
+    print(f"Total batches: {len(batches)}")
+    
+    if batches:
+        print(f"\n{Fore.CYAN}Restored batches:{Style.RESET_ALL}")
+        for i, batch in enumerate(batches[:5], 1):
+            print(f"  {i}. {batch['batch_id']} - {batch['original_name']}")
+        if len(batches) > 5:
+            print(f"  ... and {len(batches) - 5} more")
+    print(f"\nRun {Fore.CYAN}python bot.py list{Style.RESET_ALL} to see all batches.")
+
+
 async def _delete_from_discord(batch_id: str) -> None:
     batch = get_batch(batch_id)
     if not batch:
@@ -355,6 +475,110 @@ async def _upload_backup_to_discord(backup_path: Path) -> None:
     await done
 
 
+async def _restore_database_from_discord(backup_filename: str = None) -> Path:
+    """
+    Restore database from Discord backup channel.
+    
+    Args:
+        backup_filename: Specific backup filename to restore (None = latest)
+    
+    Returns:
+        Path to restored database file.
+    """
+    config = Config.get_instance()
+    client = setup_bot(config.discord_bot_token)
+    done: asyncio.Future[Path] = asyncio.Future()
+
+    @client.event
+    async def on_ready() -> None:
+        try:
+            if not client.guilds:
+                raise StorageBotError("Bot is not connected to any guild.")
+            guild = client.guilds[0]
+            print(f"✓ Connected to guild: {guild.name}")
+            
+            backup_channel = discord.utils.get(
+                guild.text_channels, name=config.backup_channel_name
+            )
+            if backup_channel is None:
+                raise StorageBotError(
+                    f"Backup channel '{config.backup_channel_name}' not found."
+                )
+            print(f"✓ Found backup channel: #{backup_channel.name}")
+            
+            # Find the backup file
+            target_message = None
+            async for message in backup_channel.history(limit=100, oldest_first=False):
+                if not message.attachments:
+                    continue
+                
+                attachment = message.attachments[0]
+                
+                # Check if this is a database backup file
+                if not attachment.filename.endswith('.db'):
+                    continue
+                
+                # If specific filename requested, match it
+                if backup_filename:
+                    if attachment.filename == backup_filename:
+                        target_message = message
+                        break
+                else:
+                    # Use the first (most recent) backup found
+                    target_message = message
+                    break
+            
+            if not target_message:
+                if backup_filename:
+                    raise StorageBotError(
+                        f"Backup file '{backup_filename}' not found in #{config.backup_channel_name}"
+                    )
+                else:
+                    raise StorageBotError(
+                        f"No database backups found in #{config.backup_channel_name}"
+                    )
+            
+            attachment = target_message.attachments[0]
+            print(f"✓ Found backup: {attachment.filename} ({format_bytes(attachment.size)})")
+            print(f"  Uploaded: {target_message.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            
+            # Download the backup file
+            print(f"✓ Downloading backup...")
+            temp_backup = DEFAULT_DB_PATH.with_suffix('.db.downloading')
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(attachment.url) as resp:
+                    if resp.status != 200:
+                        raise StorageBotError(f"Failed to download backup: HTTP {resp.status}")
+                    
+                    async with aiofiles.open(temp_backup, 'wb') as f:
+                        async for chunk in resp.content.iter_chunked(1024 * 1024):
+                            await f.write(chunk)
+            
+            print(f"✓ Download complete")
+            
+            # Backup current database if it exists
+            if DEFAULT_DB_PATH.exists():
+                old_backup = DEFAULT_DB_PATH.with_name(
+                    f"storage_pre_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+                )
+                shutil.copy2(DEFAULT_DB_PATH, old_backup)
+                print(f"✓ Current database backed up to: {old_backup.name}")
+            
+            # Replace with downloaded backup
+            temp_backup.replace(DEFAULT_DB_PATH)
+            print(f"✓ Database restored successfully")
+            
+            done.set_result(DEFAULT_DB_PATH)
+        except Exception as exc:
+            done.set_exception(exc)
+        finally:
+            await client.close()
+
+    await client.start(config.discord_bot_token)
+    return await done
+
+
 def main() -> None:
     """
     CLI entry point.
@@ -382,6 +606,8 @@ def main() -> None:
             command_delete(args)
         elif args.command == "stats":
             command_stats(args)
+        elif args.command == "channels":
+            command_channels(args)
         elif args.command == "verify":
             command_verify(args)
         elif args.command == "resume":
@@ -390,6 +616,8 @@ def main() -> None:
             command_backup(args)
         elif args.command == "sync":
             command_sync(args)
+        elif args.command == "restore":
+            command_restore(args)
     except StorageBotError as exc:
         print(f"{Fore.RED}Error: {exc}{Style.RESET_ALL}")
 

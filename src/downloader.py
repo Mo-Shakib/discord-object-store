@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import logging
 import shutil
 from pathlib import Path
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional
 
+import aiofiles
 from tqdm import tqdm
 
 from .config import Config
@@ -23,7 +26,9 @@ logger = logging.getLogger(__name__)
 
 def _temp_dir(batch_id: str) -> Path:
     base = Path(__file__).resolve().parents[1]
-    return base / f"temp_download_{batch_id}"
+    temp = base / f"temp_download_{batch_id}"
+    temp.mkdir(parents=True, exist_ok=True, mode=0o700)  # Owner-only permissions
+    return temp
 
 
 def show_download_summary(metadata: Dict[str, object]) -> None:
@@ -41,37 +46,50 @@ def show_download_summary(metadata: Dict[str, object]) -> None:
     )
 
 
-def verify_chunks(chunk_paths: List[Path], hashes: List[str]) -> None:
+async def verify_chunk_async(path: Path, expected_hash: str) -> None:
     """
-    Validate chunk integrity with SHA-256 hashes.
+    Validate a single chunk integrity with SHA-256 hash (async).
+
+    Args:
+        path: Chunk file path.
+        expected_hash: Expected hash.
+    """
+    buffer_size = get_io_buffer_size()
+    digest = hashlib.sha256()
+    
+    async with aiofiles.open(path, "rb") as infile:
+        while True:
+            chunk = await infile.read(buffer_size)
+            if not chunk:
+                break
+            digest.update(chunk)
+    
+    if not hmac.compare_digest(digest.hexdigest(), expected_hash):
+        raise StorageBotError(f"Chunk integrity check failed: {path.name}")
+
+
+async def verify_chunks_parallel(chunk_paths: List[Path], hashes: List[str]) -> None:
+    """
+    Validate chunk integrity with SHA-256 hashes in parallel.
 
     Args:
         chunk_paths: List of chunk file paths.
         hashes: Expected hashes.
     """
-    import hashlib
-    import hmac
-
-    buffer_size = get_io_buffer_size()
-    for path, expected in zip(chunk_paths, hashes):
-        digest = hashlib.sha256()
-        with open(path, "rb") as infile:
-            while True:
-                chunk = infile.read(buffer_size)
-                if not chunk:
-                    break
-                digest.update(chunk)
-        if not hmac.compare_digest(digest.hexdigest(), expected):
-            raise StorageBotError(f"Chunk integrity check failed: {path.name}")
+    await asyncio.gather(*[
+        verify_chunk_async(path, expected_hash)
+        for path, expected_hash in zip(chunk_paths, hashes)
+    ])
 
 
-async def download(batch_id: str, output_path: str) -> Path:
+async def download(batch_id: str, output_path: str, progress_callback: Optional[callable] = None) -> Path:
     """
     Download and restore a batch.
 
     Args:
         batch_id: Batch identifier.
         output_path: Destination directory.
+        progress_callback: Optional callback(done, total) for download progress.
 
     Returns:
         Path to restored data.
@@ -90,9 +108,12 @@ async def download(batch_id: str, output_path: str) -> Path:
         "chunk_count": batch["chunk_count"],
     }
     show_download_summary(summary)
+    
+    # Show storage channel if available
+    if batch.get("storage_channel_name"):
+        print(f"Storage channel: #{batch['storage_channel_name']}")
 
     temp_dir = _temp_dir(batch_id)
-    temp_dir.mkdir(parents=True, exist_ok=True)
     base_output = Path(output_path).expanduser().resolve()
     restore_dir = (
         base_output / batch["original_name"]
@@ -109,6 +130,9 @@ async def download(batch_id: str, output_path: str) -> Path:
         progress.n = done
         progress.total = total
         progress.refresh()
+        # Call API progress callback if provided
+        if progress_callback:
+            progress_callback(done, total)
 
     try:
         chunk_paths = await download_chunks_concurrent(
@@ -120,7 +144,8 @@ async def download(batch_id: str, output_path: str) -> Path:
         progress.close()
 
         print("✓ Verifying integrity...")
-        verify_chunks(chunk_paths, [chunk["file_hash"] for chunk in chunks])
+        # Parallel verification for better performance
+        await verify_chunks_parallel(chunk_paths, [chunk["file_hash"] for chunk in chunks])
 
         print("✓ Merging chunks...")
         await merge_chunks(chunk_paths, encrypted_path)
@@ -133,13 +158,13 @@ async def download(batch_id: str, output_path: str) -> Path:
         print("✓ Decrypting archive...")
         key = derive_key(Config.get_instance().encryption_key,
                          batch["encryption_salt"])
-        await asyncio.to_thread(decrypt_file, encrypted_path, archive_path, key)
+        await decrypt_file(encrypted_path, archive_path, key)
 
         print("✓ Extracting files...")
         await asyncio.to_thread(extract_archive, archive_path, restore_dir)
     except Exception:
-        shutil.rmtree(temp_dir, ignore_errors=True)
+        await asyncio.to_thread(shutil.rmtree, temp_dir, ignore_errors=True)
         raise
 
-    shutil.rmtree(temp_dir, ignore_errors=True)
+    await asyncio.to_thread(shutil.rmtree, temp_dir, ignore_errors=True)
     return restore_dir
