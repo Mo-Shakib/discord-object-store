@@ -109,14 +109,15 @@ def scan_path(path: Path) -> List[Dict[str, object]]:
 
 def create_archive(file_list: List[Dict[str, object]], output_path: Path) -> None:
     """
-    Create a gzip-compressed tar archive.
+    Create a gzip-compressed tar archive with optimized memory usage.
 
     Args:
         file_list: List of file metadata.
         output_path: Path to output archive.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(output_path, "w:gz") as tar:
+    # Use compresslevel=6 for balanced speed/compression with lower memory usage
+    with tarfile.open(output_path, "w:gz", compresslevel=6) as tar:
         for item in file_list:
             file_path = Path(item["path"])
             arcname = item["relative_path"]
