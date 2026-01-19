@@ -367,20 +367,21 @@ async def api_upload(
     async def _work() -> Dict[str, Any]:
         await _log(job.id, "Starting Discord upload...")
         await _set_progress(job.id, 30, "Preparing chunks")
-        
+
         # Create progress callback for chunk uploads
         def _upload_progress(done: int, total: int) -> None:
             # Map chunk upload progress to 30-95% range
             progress_pct = int(30 + (done / max(total, 1)) * 65)
-            asyncio.create_task(_set_progress(job.id, progress_pct, f"Uploading chunks {done}/{total}"))
-        
+            asyncio.create_task(_set_progress(
+                job.id, progress_pct, f"Uploading chunks {done}/{total}"))
+
         async with DISCORD_LOCK:
             source_path = _derive_source_path()
             channel_name = channel.strip() if channel else None
             batch_id = await upload(
-                str(source_path), 
-                confirm=confirm, 
-                metadata=meta, 
+                str(source_path),
+                confirm=confirm,
+                metadata=meta,
                 channel=channel_name,
                 progress_callback=_upload_progress
             )
@@ -401,20 +402,21 @@ async def api_download(payload: DownloadRequest) -> Dict[str, str]:
     async def _work() -> Dict[str, Any]:
         await _log(job.id, f"Restoring batch to {destination}...")
         await _set_progress(job.id, 10, "Starting download")
-        
+
         # Create progress callback for chunk downloads
         def _download_progress(done: int, total: int) -> None:
             # Map chunk download progress to 10-80% range
             progress_pct = int(10 + (done / max(total, 1)) * 70)
-            asyncio.create_task(_set_progress(job.id, progress_pct, f"Downloading chunks {done}/{total}"))
-        
+            asyncio.create_task(_set_progress(
+                job.id, progress_pct, f"Downloading chunks {done}/{total}"))
+
         async with DISCORD_LOCK:
             restored_path = await download(
-                payload.batch_id, 
+                payload.batch_id,
                 destination,
                 progress_callback=_download_progress
             )
-        
+
         await _set_progress(job.id, 100, "Download complete")
         return {"restored_path": str(restored_path)}
 
@@ -500,7 +502,8 @@ async def api_open_folder(payload: OpenFolderRequest) -> Dict[str, str]:
         open_folder_in_explorer(str(folder_path))
         return {"status": "success", "path": str(folder_path)}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to open folder: {exc}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to open folder: {exc}")
 
 
 @app.get("/api/jobs/{job_id}")
