@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import secrets
 from pathlib import Path
 from typing import Callable, Optional
 
+import aiofiles
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -89,14 +91,14 @@ def decrypt_chunk(data: bytes, key: str) -> bytes:
         raise EncryptionError("Failed to decrypt chunk.") from exc
 
 
-def encrypt_file(
+async def encrypt_file(
     input_path: Path,
     output_path: Path,
     key: str,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> None:
     """
-    Encrypt a file using chunked Fernet encryption.
+    Encrypt a file using chunked Fernet encryption (async).
 
     Args:
         input_path: Source file path.
@@ -110,14 +112,16 @@ def encrypt_file(
     buffer_size = get_io_buffer_size()
 
     try:
-        with open(input_path, "rb") as infile, open(output_path, "wb") as outfile:
+        async with aiofiles.open(input_path, "rb") as infile, \
+                   aiofiles.open(output_path, "wb") as outfile:
             while True:
-                chunk = infile.read(buffer_size)
+                chunk = await infile.read(buffer_size)
                 if not chunk:
                     break
-                encrypted = fernet.encrypt(chunk)
-                outfile.write(len(encrypted).to_bytes(8, "big"))
-                outfile.write(encrypted)
+                # Encryption is CPU-bound, offload to thread pool
+                encrypted = await asyncio.to_thread(fernet.encrypt, chunk)
+                await outfile.write(len(encrypted).to_bytes(8, "big"))
+                await outfile.write(encrypted)
                 processed += len(chunk)
                 if progress_callback:
                     progress_callback(processed, total, str(input_path))
@@ -125,14 +129,14 @@ def encrypt_file(
         raise EncryptionError("Failed to encrypt file.") from exc
 
 
-def decrypt_file(
+async def decrypt_file(
     input_path: Path,
     output_path: Path,
     key: str,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> None:
     """
-    Decrypt a file created by encrypt_file.
+    Decrypt a file created by encrypt_file (async).
 
     Args:
         input_path: Encrypted file path.
@@ -146,17 +150,19 @@ def decrypt_file(
     buffer_size = get_io_buffer_size()
 
     try:
-        with open(input_path, "rb") as infile, open(output_path, "wb") as outfile:
+        async with aiofiles.open(input_path, "rb") as infile, \
+                   aiofiles.open(output_path, "wb") as outfile:
             while True:
-                size_bytes = infile.read(8)
+                size_bytes = await infile.read(8)
                 if not size_bytes:
                     break
                 chunk_size = int.from_bytes(size_bytes, "big")
-                encrypted = infile.read(chunk_size)
+                encrypted = await infile.read(chunk_size)
                 if len(encrypted) != chunk_size:
                     raise EncryptionError("Encrypted file is truncated or corrupt.")
-                decrypted = fernet.decrypt(encrypted)
-                outfile.write(decrypted)
+                # Decryption is CPU-bound, offload to thread pool
+                decrypted = await asyncio.to_thread(fernet.decrypt, encrypted)
+                await outfile.write(decrypted)
                 processed += len(decrypted)
                 if progress_callback:
                     progress_callback(processed, total, str(input_path))
