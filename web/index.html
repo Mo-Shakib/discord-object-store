@@ -1320,10 +1320,34 @@
             });
         };
 
+        // Parse date strings reliably (handles SQLite and ISO formats)
+        const parseDate = (dateString) => {
+            if (!dateString) return null;
+            
+            // Try parsing as-is first
+            let date = new Date(dateString);
+            
+            // If invalid and the string doesn't contain 'T' or 'Z', assume it's local time
+            if (isNaN(date.getTime()) && !dateString.includes('T') && !dateString.includes('Z')) {
+                // SQLite format: "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DD HH:MM"
+                // Add 'T' to make it ISO-compliant for parsing
+                const normalized = dateString.replace(' ', 'T');
+                date = new Date(normalized);
+            }
+            
+            // If still invalid, try adding seconds if missing
+            if (isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)) {
+                date = new Date(dateString.replace(' ', 'T') + ':00');
+            }
+            
+            return isNaN(date.getTime()) ? null : date;
+        };
+
         const formatDate = (value) => {
             if (!value) return '--';
-            const parsed = new Date(value);
-            if (Number.isNaN(parsed.getTime())) return '--';
+            const parsed = parseDate(value);
+            if (!parsed) return '--';
+            
             const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             return parsed.toLocaleDateString(undefined, {
                 month: 'short',
@@ -1331,6 +1355,36 @@
                 year: 'numeric',
                 timeZone,
             });
+        };
+
+        // Relative time formatting (e.g., "5m ago", "2h ago")
+        const getRelativeTime = (dateString) => {
+            if (!dateString) return '--';
+            
+            const date = parseDate(dateString);
+            if (!date) {
+                console.warn('Unable to parse date:', dateString);
+                return '--';
+            }
+            
+            const now = new Date();
+            const diff = now - date;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            const months = Math.floor(days / 30);
+            const years = Math.floor(days / 365);
+            
+            // Handle future dates (shouldn't happen but just in case)
+            if (seconds < 0) return 'just now';
+            
+            if (seconds < 60) return 'just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 30) return `${days}d ago`;
+            if (months < 12) return `${months}mo ago`;
+            return `${years}y ago`;
         };
 
         const escapeHtml = (value) => {
@@ -1381,7 +1435,7 @@
                 };
                 const name = escapeHtml(batch.original_name || `Batch ${batch.batch_id}`);
                 const fileCount = batch.file_count ? `${batch.file_count} files` : 'Files count unavailable';
-                const when = formatDate(batch.upload_date);
+                const when = getRelativeTime(batch.upload_date);
                 const shortId = escapeHtml(batch.batch_id ? batch.batch_id.slice(0, 6) : '');
 
                 const item = document.createElement('div');
@@ -1477,7 +1531,7 @@
                         ${escapeHtml(batch.original_name)}
                     </td>
                     <td class="px-6 py-4 text-discord-light font-mono text-xs">${formatBytes(batch.total_size)}</td>
-                    <td class="px-6 py-4 text-discord-light font-mono text-xs hidden lg:table-cell">${formatDate(batch.upload_date)}</td>
+                    <td class="px-6 py-4 text-discord-light font-mono text-xs hidden lg:table-cell" title="${formatDate(batch.upload_date)}">${getRelativeTime(batch.upload_date)}</td>
                     <td class="px-6 py-4">${statusBadge}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1553,8 +1607,8 @@
                             <div class="text-white font-semibold">${formatBytes(batch.total_size)}</div>
                         </div>
                         <div class="bg-discord-bg/60 border border-discord-divider/60 rounded-lg px-3 py-2">
-                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Date</div>
-                            <div class="text-white font-semibold">${formatDate(batch.upload_date)}</div>
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Uploaded</div>
+                            <div class="text-white font-semibold" title="${formatDate(batch.upload_date)}">${getRelativeTime(batch.upload_date)}</div>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 gap-3 text-xs">
@@ -1672,6 +1726,13 @@
             loadChannels();
             updateBatchViewToggle(batchView);
             updateLastUpdatedTime();
+            
+            // Update relative times every 60 seconds to keep them fresh
+            setInterval(() => {
+                // Re-render batches to update all relative times
+                renderBatches();
+                renderActivity();
+            }, 60000);
         });
 
         if (globalSearchInput) {
