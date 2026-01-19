@@ -327,35 +327,57 @@
                     <div class="px-6 py-4 border-b border-discord-divider flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 rounded-xl bg-discord-element flex items-center justify-center text-discord-brand">
-                                <i class="fa-solid fa-clipboard-list"></i>
+                                <i class="fa-solid fa-chart-line"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-white">Changelog</h3>
-                                <p class="text-xs text-discord-light">Latest updates and improvements</p>
+                                <h3 class="text-base font-bold text-white">Activity & Insights</h3>
+                                <p class="text-xs text-discord-light">Last 7 days of storage activity</p>
                             </div>
                         </div>
-                        <span class="text-xs font-mono text-discord-brand bg-discord-brand/10 px-3 py-1 rounded-full border border-discord-brand/20">v4.0.0</span>
+                        <span class="text-xs font-mono text-discord-brand bg-discord-brand/10 px-3 py-1 rounded-full border border-discord-brand/20">Live</span>
                     </div>
-                    <div class="px-6 py-5 space-y-4 text-sm text-discord-light">
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 rounded-full bg-discord-brand mt-2"></div>
-                            <div>
-                                <div class="font-semibold text-white">Web UI launch</div>
-                                <div>Discord-style dashboard with live job runner and status logs.</div>
+                    <div class="px-6 py-5 space-y-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Upload Volume</div>
+                                        <div id="upload-volume-total" class="text-lg font-bold text-white mt-1">-- batches</div>
+                                    </div>
+                                    <span id="upload-volume-trend" class="text-xs font-mono text-discord-light bg-discord-bg/60 border border-discord-divider/60 px-2 py-1 rounded-full">--</span>
+                                </div>
+                                <div id="upload-volume-bars" class="flex items-end gap-2 h-28"></div>
+                                <div id="upload-volume-labels" class="flex justify-between text-[10px] text-discord-light mt-3 font-mono"></div>
+                            </div>
+                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Storage Growth</div>
+                                        <div id="storage-growth-total" class="text-lg font-bold text-white mt-1">--</div>
+                                    </div>
+                                    <span id="storage-growth-trend" class="text-xs font-mono text-discord-light bg-discord-bg/60 border border-discord-divider/60 px-2 py-1 rounded-full">--</span>
+                                </div>
+                                <div class="h-28 bg-discord-bg/60 rounded-xl border border-discord-divider/60 p-3">
+                                    <svg viewBox="0 0 200 60" class="w-full h-full">
+                                        <defs>
+                                            <linearGradient id="growthLine" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0%" stop-color="#5865F2" />
+                                                <stop offset="100%" stop-color="#8b5cf6" />
+                                            </linearGradient>
+                                        </defs>
+                                        <path id="storage-growth-line" d="M5 50 L35 42 L65 38 L95 30 L125 24 L155 18 L195 12" fill="none" stroke="url(#growthLine)" stroke-width="3" stroke-linecap="round" />
+                                        <path id="storage-growth-area" d="M5 50 L35 42 L65 38 L95 30 L125 24 L155 18 L195 12 L195 60 L5 60 Z" fill="url(#growthLine)" opacity="0.15" />
+                                    </svg>
+                                </div>
+                                <div id="storage-growth-labels" class="flex justify-between text-[10px] text-discord-light mt-3 font-mono"></div>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 rounded-full bg-green-400 mt-2"></div>
-                            <div>
-                                <div class="font-semibold text-white">Batch browsing upgrades</div>
-                                <div>Searchable batch table with hover actions and richer metadata cards.</div>
+                        <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Recent Activity</div>
+                                <span id="activity-updated" class="text-[10px] text-discord-light font-mono">Updated just now</span>
                             </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 rounded-full bg-blue-400 mt-2"></div>
-                            <div>
-                                <div class="font-semibold text-white">Maintenance actions</div>
-                                <div>One-click sync, backup, and reset flows from the Actions view.</div>
+                            <div id="activity-feed" class="space-y-3 text-sm text-discord-light">
                             </div>
                         </div>
                     </div>
@@ -454,17 +476,17 @@
                         <input id="batch-search" type="text" placeholder="Filter batches..." class="w-full bg-transparent border-none rounded-xl py-3 pl-12 pr-4 text-white text-sm focus:ring-0 placeholder-discord-light/50">
                     </div>
                     <div class="flex gap-2 pr-2">
-                         <button class="w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors" title="Grid View (Coming Soon)">
+                         <button id="batch-view-grid" class="w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors" title="Grid View">
                             <i class="fa-solid fa-grip"></i>
                          </button>
-                         <button class="w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm">
+                         <button id="batch-view-list" class="w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm" title="List View">
                             <i class="fa-solid fa-list"></i>
                          </button>
                     </div>
                 </div>
 
                 <div class="bg-discord-sidebar border border-discord-divider rounded-2xl overflow-hidden shadow-card">
-                    <div class="overflow-x-auto">
+                    <div id="batch-table-container" class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="bg-discord-element border-b border-discord-divider text-left">
@@ -479,6 +501,8 @@
                             <tbody id="batch-table" class="divide-y divide-discord-divider">
                             </tbody>
                         </table>
+                    </div>
+                    <div id="batch-grid" class="hidden p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     </div>
                     <div id="empty-state" class="hidden p-12 flex flex-col items-center justify-center text-center">
                         <div class="w-16 h-16 bg-discord-element rounded-full flex items-center justify-center text-discord-light mb-4">
@@ -744,7 +768,10 @@
                 const haystack = [
                     batch.batch_id,
                     batch.original_name,
-                    batch.status
+                    batch.status,
+                    batch.title,
+                    batch.tags,
+                    batch.description
                 ].join(' ').toLowerCase();
                 return terms.every((term) => haystack.includes(term));
             });
@@ -763,28 +790,267 @@
             });
         };
 
-        const renderBatches = () => {
-            const table = document.getElementById('batch-table');
-            const emptyState = document.getElementById('empty-state');
-            const batchesToRender = getFilteredBatches();
+        const escapeHtml = (value) => {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
 
-            table.innerHTML = '';
+        const renderActivity = () => {
+            const feed = document.getElementById('activity-feed');
+            const updated = document.getElementById('activity-updated');
+            if (!feed || !updated) return;
 
-            if (!batchesToRender || batchesToRender.length === 0) {
-                emptyState.classList.remove('hidden');
+            feed.innerHTML = '';
+            const items = Array.isArray(allBatches) ? allBatches.slice(0, 3) : [];
+
+            if (!items.length) {
+                updated.textContent = 'No activity yet';
+                feed.innerHTML = `
+                    <div class="text-xs text-discord-light">Upload a batch to see activity.</div>
+                `;
                 return;
             }
 
-            emptyState.classList.add('hidden');
+            const statusMap = {
+                complete: {
+                    dot: 'bg-green-400',
+                    title: 'Uploaded batch',
+                },
+                uploading: {
+                    dot: 'bg-discord-brand',
+                    title: 'Uploading batch',
+                },
+                failed: {
+                    dot: 'bg-red-400',
+                    title: 'Upload failed',
+                },
+            };
+
+            items.forEach((batch) => {
+                const statusInfo = statusMap[batch.status] || {
+                    dot: 'bg-yellow-400',
+                    title: 'Batch update',
+                };
+                const name = escapeHtml(batch.original_name || `Batch ${batch.batch_id}`);
+                const fileCount = batch.file_count ? `${batch.file_count} files` : 'Files count unavailable';
+                const when = formatDate(batch.upload_date);
+                const shortId = escapeHtml(batch.batch_id ? batch.batch_id.slice(0, 6) : '');
+
+                const item = document.createElement('div');
+                item.className = 'flex items-start gap-3';
+                item.innerHTML = `
+                    <div class="w-2 h-2 rounded-full ${statusInfo.dot} mt-2"></div>
+                    <div>
+                        <div class="font-semibold text-white">${statusInfo.title}</div>
+                        <div>${name} • ${fileCount} • ${when}${shortId ? ` • #${shortId}` : ''}</div>
+                    </div>
+                `;
+                feed.appendChild(item);
+            });
+
+            updated.textContent = `Updated ${formatDate(items[0].upload_date)}`;
+        };
+
+        let batchView = 'list';
+
+        const updateBatchViewToggle = (view) => {
+            const gridBtn = document.getElementById('batch-view-grid');
+            const listBtn = document.getElementById('batch-view-list');
+            if (!gridBtn || !listBtn) return;
+
+            if (view === 'grid') {
+                gridBtn.className = 'w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm';
+                listBtn.className = 'w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors';
+            } else {
+                listBtn.className = 'w-9 h-9 rounded-lg bg-discord-brand text-white flex items-center justify-center shadow-sm';
+                gridBtn.className = 'w-9 h-9 rounded-lg bg-discord-element hover:bg-discord-hover text-discord-light flex items-center justify-center transition-colors';
+            }
+        };
+
+        const setBatchView = (view) => {
+            batchView = view;
+            updateBatchViewToggle(view);
+            renderBatches();
+        };
+
+        const toDayKey = (date) => {
+            const local = new Date(date);
+            if (Number.isNaN(local.getTime())) return null;
+            return local.toLocaleDateString('en-CA');
+        };
+
+        const getLastNDays = (count) => {
+            const days = [];
+            const now = new Date();
+            for (let i = count - 1; i >= 0; i -= 1) {
+                const day = new Date(now);
+                day.setDate(now.getDate() - i);
+                days.push(day);
+            }
+            return days;
+        };
+
+        const renderInsights = () => {
+            const volumeTotal = document.getElementById('upload-volume-total');
+            const volumeTrend = document.getElementById('upload-volume-trend');
+            const volumeBars = document.getElementById('upload-volume-bars');
+            const volumeLabels = document.getElementById('upload-volume-labels');
+            const growthTotal = document.getElementById('storage-growth-total');
+            const growthTrend = document.getElementById('storage-growth-trend');
+            const growthLine = document.getElementById('storage-growth-line');
+            const growthArea = document.getElementById('storage-growth-area');
+            const growthLabels = document.getElementById('storage-growth-labels');
+
+            if (!volumeTotal || !volumeTrend || !volumeBars || !volumeLabels
+                || !growthTotal || !growthTrend || !growthLine || !growthArea || !growthLabels) {
+                return;
+            }
+
+            const rawDates = (allBatches || [])
+                .map((batch) => toDayKey(batch.upload_date))
+                .filter(Boolean);
+            const uniqueKeys = Array.from(new Set(rawDates)).sort();
+            const dayKeys = (uniqueKeys.length ? uniqueKeys.slice(-7) : getLastNDays(7).map((day) => toDayKey(day)));
+            const days = dayKeys.map((key) => new Date(key));
+            const byDay = dayKeys.reduce((acc, key) => {
+                acc[key] = { batches: 0, size: 0 };
+                return acc;
+            }, {});
+
+            (allBatches || []).forEach((batch) => {
+                const key = toDayKey(batch.upload_date);
+                if (!key || !(key in byDay)) return;
+                byDay[key].batches += 1;
+                byDay[key].size += Number(batch.total_size || 0);
+            });
+
+            const dailyBatches = dayKeys.map((key) => byDay[key].batches);
+            const dailySize = dayKeys.map((key) => byDay[key].size);
+            const totalBatches = dailyBatches.reduce((sum, val) => sum + val, 0);
+            const totalSize = dailySize.reduce((sum, val) => sum + val, 0);
+            const cumulativeSize = dailySize.reduce((acc, value, index) => {
+                const nextValue = value + (acc[index - 1] || 0);
+                acc.push(nextValue);
+                return acc;
+            }, []);
+
+            volumeTotal.textContent = `${totalBatches} batches`;
+            growthTotal.textContent = `+${formatBytes(totalSize)}`;
+
+            const prevDays = uniqueKeys.length > 7 ? uniqueKeys.slice(-14, -7) : [];
+            const prevBatches = (allBatches || []).reduce((sum, batch) => {
+                const key = toDayKey(batch.upload_date);
+                if (!key || !prevDays.includes(key)) return sum;
+                return sum + 1;
+            }, 0);
+            const prevSize = (allBatches || []).reduce((sum, batch) => {
+                const key = toDayKey(batch.upload_date);
+                if (!key || !prevDays.includes(key)) return sum;
+                return sum + Number(batch.total_size || 0);
+            }, 0);
+
+            const formatTrend = (current, previous, positiveClass, negativeClass) => {
+                if (!previous) {
+                    if (current > 0) {
+                        return { text: '+100%', className: positiveClass };
+                    }
+                    return { text: '0%', className: 'text-discord-light bg-discord-bg/60 border border-discord-divider/60' };
+                }
+                const delta = ((current - previous) / previous) * 100;
+                const sign = delta >= 0 ? '+' : '';
+                return {
+                    text: `${sign}${delta.toFixed(0)}%`,
+                    className: delta >= 0 ? positiveClass : negativeClass,
+                };
+            };
+
+            const volumeTrendInfo = formatTrend(
+                totalBatches,
+                prevBatches,
+                'text-green-400 bg-green-500/10 border border-green-500/20',
+                'text-red-400 bg-red-500/10 border border-red-500/20',
+            );
+            volumeTrend.textContent = volumeTrendInfo.text;
+            volumeTrend.className = `text-xs font-mono px-2 py-1 rounded-full ${volumeTrendInfo.className}`;
+
+            const growthTrendInfo = formatTrend(
+                totalSize,
+                prevSize,
+                'text-green-400 bg-green-500/10 border border-green-500/20',
+                'text-red-400 bg-red-500/10 border border-red-500/20',
+            );
+            growthTrend.textContent = growthTrendInfo.text;
+            growthTrend.className = `text-xs font-mono px-2 py-1 rounded-full ${growthTrendInfo.className}`;
+
+            const maxBatches = Math.max(1, ...dailyBatches);
+            volumeBars.innerHTML = '';
+            dailyBatches.forEach((count, index) => {
+                const height = Math.max(10, Math.round((count / maxBatches) * 96));
+                const bar = document.createElement('div');
+                const tint = index >= 4 ? 'bg-purple-500/60' : 'bg-discord-brand/60';
+                bar.className = `w-6 rounded-lg ${tint}`;
+                bar.style.height = `${height}px`;
+                bar.title = `${count} batches`;
+                volumeBars.appendChild(bar);
+            });
+
+            volumeLabels.innerHTML = '';
+            days.forEach((day) => {
+                const label = document.createElement('span');
+                label.textContent = day.toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: '2-digit',
+                });
+                volumeLabels.appendChild(label);
+            });
+
+            const maxSize = Math.max(1, ...cumulativeSize);
+            const points = cumulativeSize.map((value, index) => {
+                const x = 5 + (index * (190 / 6));
+                const y = 50 - (value / maxSize) * 38;
+                return `${x.toFixed(1)} ${y.toFixed(1)}`;
+            });
+            const linePath = `M${points[0]} ` + points.slice(1).map((point) => `L${point}`).join(' ');
+            growthLine.setAttribute('d', linePath);
+            growthArea.setAttribute('d', `${linePath} L195 60 L5 60 Z`);
+
+            growthLabels.innerHTML = '';
+            const labelValues = [0, maxSize * 0.33, maxSize * 0.66, maxSize];
+            labelValues.forEach((value) => {
+                const label = document.createElement('span');
+                label.textContent = formatBytes(Math.round(value));
+                growthLabels.appendChild(label);
+            });
+        };
+
+        const getStatusBadge = (status) => {
+            if (status === 'complete') {
+                return `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20">Synced</span>`;
+            }
+            if (status === 'failed') {
+                return `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-red-500/10 text-red-400 border border-red-500/20">Failed</span>`;
+            }
+            if (status === 'uploading') {
+                return `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-discord-brand/10 text-discord-brand border border-discord-brand/20">Uploading</span>`;
+            }
+            return `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-discord-bg text-discord-light border border-discord-divider">${status}</span>`;
+        };
+
+        const renderBatchesList = (batchesToRender) => {
+            const table = document.getElementById('batch-table');
+            table.innerHTML = '';
 
             batchesToRender.forEach((batch) => {
                 const row = document.createElement('tr');
-                row.className = 'group hover:bg-discord-hover/50 transition-colors';
+                row.className = 'group hover:bg-discord-hover/50 transition-colors cursor-pointer';
+                row.dataset.batchId = batch.batch_id;
 
-                let statusBadge = `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-discord-bg text-discord-light border border-discord-divider">${batch.status}</span>`;
-                if (batch.status === 'complete') {
-                    statusBadge = `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20">Synced</span>`;
-                }
+                const statusBadge = getStatusBadge(batch.status);
 
                 row.innerHTML = `
                     <td class="px-6 py-4 font-mono text-xs text-discord-light group-hover:text-white transition-colors">
@@ -807,8 +1073,117 @@
                         </div>
                     </td>
                 `;
+                const detailsRow = document.createElement('tr');
+                detailsRow.className = 'hidden bg-discord-bg/40';
+                detailsRow.dataset.batchDetails = batch.batch_id;
+                const title = escapeHtml(batch.title || '—');
+                const tags = escapeHtml(batch.tags || '—');
+                const description = escapeHtml(batch.description || '—');
+                detailsRow.innerHTML = `
+                    <td colspan="6" class="px-6 py-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm">
+                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
+                                <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Title</div>
+                                <div class="text-white font-semibold break-words">${title}</div>
+                            </div>
+                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
+                                <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Tags</div>
+                                <div class="text-discord-light break-words">${tags}</div>
+                            </div>
+                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-xl p-4">
+                                <div class="text-xs text-discord-light uppercase tracking-wider font-bold mb-2">Description</div>
+                                <div class="text-discord-light break-words">${description}</div>
+                            </div>
+                        </div>
+                    </td>
+                `;
                 table.appendChild(row);
+                table.appendChild(detailsRow);
             });
+        };
+
+        const renderBatchesGrid = (batchesToRender) => {
+            const grid = document.getElementById('batch-grid');
+            grid.innerHTML = '';
+
+            batchesToRender.forEach((batch) => {
+                const card = document.createElement('div');
+                card.className = 'border border-discord-divider/70 bg-discord-element/40 rounded-2xl p-4 flex flex-col gap-4 hover:border-discord-brand/40 transition-colors';
+                const title = escapeHtml(batch.title || '—');
+                const tags = escapeHtml(batch.tags || '—');
+                const description = escapeHtml(batch.description || '—');
+                const statusBadge = getStatusBadge(batch.status);
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl bg-discord-bg/60 flex items-center justify-center text-discord-brand">
+                                <i class="fa-solid fa-file-zipper"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-white font-semibold truncate">${escapeHtml(batch.original_name)}</div>
+                                <div class="text-xs text-discord-light font-mono">#${escapeHtml(batch.batch_id)}</div>
+                            </div>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-xs text-discord-light">
+                        <div class="bg-discord-bg/60 border border-discord-divider/60 rounded-lg px-3 py-2">
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Size</div>
+                            <div class="text-white font-semibold">${formatBytes(batch.total_size)}</div>
+                        </div>
+                        <div class="bg-discord-bg/60 border border-discord-divider/60 rounded-lg px-3 py-2">
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Date</div>
+                            <div class="text-white font-semibold">${formatDate(batch.upload_date)}</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 text-xs">
+                        <div>
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Title</div>
+                            <div class="text-white break-words">${title}</div>
+                        </div>
+                        <div>
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Tags</div>
+                            <div class="text-discord-light break-words">${tags}</div>
+                        </div>
+                        <div>
+                            <div class="uppercase tracking-wider text-[10px] text-discord-light/70">Description</div>
+                            <div class="text-discord-light break-words">${description}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-discord-divider/60">
+                        <button class="w-8 h-8 rounded-full bg-discord-bg/70 hover:bg-discord-brand text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Download" data-action="download" data-id="${batch.batch_id}"><i class="fa-solid fa-download"></i></button>
+                        <button class="w-8 h-8 rounded-full bg-discord-bg/70 hover:bg-green-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Verify" data-action="verify" data-id="${batch.batch_id}"><i class="fa-solid fa-check"></i></button>
+                        <button class="w-8 h-8 rounded-full bg-discord-bg/70 hover:bg-red-500 text-discord-light hover:text-white transition-all shadow-sm flex items-center justify-center" title="Delete" data-action="delete" data-id="${batch.batch_id}"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        };
+
+        const renderBatches = () => {
+            const emptyState = document.getElementById('empty-state');
+            const tableContainer = document.getElementById('batch-table-container');
+            const grid = document.getElementById('batch-grid');
+            const batchesToRender = getFilteredBatches();
+
+            if (!batchesToRender || batchesToRender.length === 0) {
+                emptyState.classList.remove('hidden');
+                tableContainer.classList.add('hidden');
+                grid.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            if (batchView === 'grid') {
+                tableContainer.classList.add('hidden');
+                grid.classList.remove('hidden');
+                renderBatchesGrid(batchesToRender);
+            } else {
+                grid.classList.add('hidden');
+                tableContainer.classList.remove('hidden');
+                renderBatchesList(batchesToRender);
+            }
         };
 
         const loadBatches = async () => {
@@ -817,6 +1192,8 @@
                 const batches = await res.json();
                 allBatches = Array.isArray(batches) ? batches : [];
                 renderBatches();
+                renderActivity();
+                renderInsights();
             } catch (e) { console.log("Batches load error"); }
         };
 
@@ -824,6 +1201,7 @@
             switchView('dashboard');
             loadStats();
             loadBatches();
+            updateBatchViewToggle(batchView);
         });
 
         if (globalSearchInput) {
@@ -856,6 +1234,14 @@
             });
         }
 
+        document.getElementById('batch-view-grid').addEventListener('click', () => {
+            setBatchView('grid');
+        });
+
+        document.getElementById('batch-view-list').addEventListener('click', () => {
+            setBatchView('list');
+        });
+
         document.getElementById('refresh-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-btn');
             const icon = btn.querySelector('i');
@@ -865,9 +1251,17 @@
             setTimeout(() => icon.classList.remove('fa-spin'), 500);
         });
 
+        const getFolderRootName = (files) => {
+            if (!files || files.length === 0) return '';
+            const sample = files[0].webkitRelativePath || '';
+            if (!sample.includes('/')) return '';
+            return sample.split('/')[0];
+        };
+
         document.getElementById('upload-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const fileInput = document.getElementById('upload-file');
+            const titleInput = document.getElementById('upload-title');
             if (!fileInput.files.length) {
                 alert('Please select a file or folder to upload.');
                 return;
@@ -876,6 +1270,14 @@
             Array.from(fileInput.files).forEach((file) => {
                 formData.append('files', file);
             });
+            if (uploadToggle.checked) {
+                const rootName = getFolderRootName(fileInput.files)
+                    || titleInput.value.trim()
+                    || window.prompt('Folder name to preserve', '');
+                if (rootName) {
+                    formData.append('root_name', rootName.trim());
+                }
+            }
             formData.append('title', document.getElementById('upload-title').value);
             formData.append('tags', document.getElementById('upload-tags').value);
             formData.append('description', document.getElementById('upload-description').value);
@@ -888,14 +1290,13 @@
             } catch(e) { alert("Upload failed to start."); }
         });
 
-        document.getElementById('batch-table').addEventListener('click', async (event) => {
-            const button = event.target.closest('button');
-            if (!button) return;
-            const action = button.dataset.action;
-            const batchId = button.dataset.id;
-            
-            if (!action) return;
+        const toggleBatchDetails = (batchId) => {
+            const detailsRow = document.querySelector(`tr[data-batch-details="${batchId}"]`);
+            if (!detailsRow) return;
+            detailsRow.classList.toggle('hidden');
+        };
 
+        const handleBatchAction = async (action, batchId) => {
             try {
                 if (action === 'download') {
                     const res = await fetch('/api/jobs/download', {
@@ -928,6 +1329,32 @@
                     startJob(data.job_id);
                 }
             } catch(e) { console.error("Action failed", e); }
+        };
+
+        document.getElementById('batch-table').addEventListener('click', async (event) => {
+            const button = event.target.closest('button');
+            if (button) {
+                const action = button.dataset.action;
+                const batchId = button.dataset.id;
+
+                if (!action) return;
+
+                await handleBatchAction(action, batchId);
+                return;
+            }
+
+            const row = event.target.closest('tr');
+            if (!row || !row.dataset.batchId) return;
+            toggleBatchDetails(row.dataset.batchId);
+        });
+
+        document.getElementById('batch-grid').addEventListener('click', async (event) => {
+            const button = event.target.closest('button');
+            if (!button) return;
+            const action = button.dataset.action;
+            const batchId = button.dataset.id;
+            if (!action) return;
+            await handleBatchAction(action, batchId);
         });
 
         const bindAction = (id, endpoint, body) => {

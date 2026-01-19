@@ -8,7 +8,7 @@ import re
 import secrets
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -107,7 +107,7 @@ def generate_batch_id(prefix: str = "BATCH") -> str:
     Returns:
         Unique batch identifier.
     """
-    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%Y%m%d")
     token = secrets.token_hex(2).upper()
     return f"{prefix}_{date_str}_{token}"
 

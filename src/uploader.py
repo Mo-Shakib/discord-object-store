@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 import logging
 import shutil
 from pathlib import Path
@@ -218,7 +218,7 @@ async def upload(
                         "title": meta_inputs["title"],
                         "tags": meta_inputs["tags"],
                         "description": meta_inputs["description"],
-                        "upload_date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+                        "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "thread_id": str(thread.id),
                     },
                 )

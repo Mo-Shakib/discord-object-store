@@ -124,13 +124,13 @@ async def create_archive_card(
     if thread_id:
         technical_ids += f"\n**Thread:** `{thread_id}`"
     content = (
-        f"🗓️ **{_format_uploaded(uploaded_at)}**\n\n"
+        f"\n\n⬇️ === 🗓️ **{_format_uploaded(uploaded_at)}** === \n\n"
         f"📦 **Title:** {_truncate(_display(title, 'Untitled Batch'), 256)}\n"
         f"📝 **Description:** {_truncate(_display(description), 512)}\n"
         f"🏷️ **Tags:** {_truncate(_display(tags), 256)}\n"
         f"📊 **Statistics:** {stats}\n"
         f"{technical_ids}\n"
-        "Discord Storage Bot 🚀"
+        "↗️ Discord Storage Bot 🚀"
     )
     return await index_channel.send(content=content)
 

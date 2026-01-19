@@ -267,7 +267,7 @@ def command_backup(_: argparse.Namespace) -> None:
     """
     Handle backup command.
     """
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = DEFAULT_DB_PATH.with_name(f"storage_backup_{timestamp}.db")
     shutil.copy2(DEFAULT_DB_PATH, backup_path)
     print(f"{Fore.GREEN}✅ Backup created: {backup_path}{Style.RESET_ALL}")

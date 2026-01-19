@@ -302,8 +302,9 @@ def list_batches(db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
         List of batch summaries.
     """
     query = """
-    SELECT batch_id, original_name, total_size, compressed_size,
-           chunk_count, file_count, upload_date, status
+    SELECT batch_id, original_name, title, tags, description,
+           total_size, compressed_size, chunk_count, file_count,
+           upload_date, status
     FROM batches
     ORDER BY upload_date DESC
     """
