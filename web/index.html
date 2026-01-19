@@ -330,48 +330,13 @@
                                 <i class="fa-solid fa-chart-line"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-white">Activity & Insights</h3>
-                                <p class="text-xs text-discord-light">Last 7 days of storage activity</p>
+                                <h3 class="text-base font-bold text-white">Recent Activity</h3>
+                                <p class="text-xs text-discord-light">Latest uploads and batch operations</p>
                             </div>
                         </div>
                         <span class="text-xs font-mono text-discord-brand bg-discord-brand/10 px-3 py-1 rounded-full border border-discord-brand/20">Live</span>
                     </div>
-                    <div class="px-6 py-5 space-y-6">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Upload Volume</div>
-                                        <div id="upload-volume-total" class="text-lg font-bold text-white mt-1">-- batches</div>
-                                    </div>
-                                    <span id="upload-volume-trend" class="text-xs font-mono text-discord-light bg-discord-bg/60 border border-discord-divider/60 px-2 py-1 rounded-full">--</span>
-                                </div>
-                                <div id="upload-volume-bars" class="flex items-end gap-2 h-28"></div>
-                                <div id="upload-volume-labels" class="flex justify-between text-[10px] text-discord-light mt-3 font-mono"></div>
-                            </div>
-                            <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Storage Growth</div>
-                                        <div id="storage-growth-total" class="text-lg font-bold text-white mt-1">--</div>
-                                    </div>
-                                    <span id="storage-growth-trend" class="text-xs font-mono text-discord-light bg-discord-bg/60 border border-discord-divider/60 px-2 py-1 rounded-full">--</span>
-                                </div>
-                                <div class="h-28 bg-discord-bg/60 rounded-xl border border-discord-divider/60 p-3">
-                                    <svg viewBox="0 0 200 60" class="w-full h-full">
-                                        <defs>
-                                            <linearGradient id="growthLine" x1="0" y1="0" x2="1" y2="0">
-                                                <stop offset="0%" stop-color="#5865F2" />
-                                                <stop offset="100%" stop-color="#8b5cf6" />
-                                            </linearGradient>
-                                        </defs>
-                                        <path id="storage-growth-line" d="M5 50 L35 42 L65 38 L95 30 L125 24 L155 18 L195 12" fill="none" stroke="url(#growthLine)" stroke-width="3" stroke-linecap="round" />
-                                        <path id="storage-growth-area" d="M5 50 L35 42 L65 38 L95 30 L125 24 L155 18 L195 12 L195 60 L5 60 Z" fill="url(#growthLine)" opacity="0.15" />
-                                    </svg>
-                                </div>
-                                <div id="storage-growth-labels" class="flex justify-between text-[10px] text-discord-light mt-3 font-mono"></div>
-                            </div>
-                        </div>
+                    <div class="px-6 py-5">
                         <div class="bg-discord-element/40 border border-discord-divider/60 rounded-2xl p-5">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="text-xs text-discord-light uppercase tracking-wider font-bold">Recent Activity</div>
@@ -447,6 +412,27 @@
                             <div>
                                 <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">Description</label>
                                 <textarea id="upload-description" rows="2" class="w-full bg-discord-element border border-discord-divider rounded-xl p-4 text-sm text-white placeholder-discord-light/30 focus:border-discord-brand resize-none" placeholder="Brief summary of contents..."></textarea>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-discord-light uppercase tracking-wide mb-2 block">
+                                    Storage Channel
+                                    <span class="text-discord-light/50 font-normal normal-case text-xs ml-2">(Optional - Auto round-robin if not selected)</span>
+                                </label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-discord-light/50"></i>
+                                    <select id="upload-channel" class="w-full bg-discord-element border border-discord-divider rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:border-discord-brand appearance-none cursor-pointer">
+                                        <option value="">Auto (Round-Robin Distribution)</option>
+                                        <option value="file-storage-vault">file-storage-vault</option>
+                                        <option value="backup-storage">backup-storage</option>
+                                        <option value="archive-vault">archive-vault</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-discord-light/50 pointer-events-none"></i>
+                                </div>
+                                <p class="text-xs text-discord-light/70 mt-2 ml-1">
+                                    <i class="fa-solid fa-circle-info mr-1"></i>
+                                    Select a specific channel or leave as Auto for automatic distribution across all channels
+                                </p>
                             </div>
 
                             <div class="pt-6 border-t border-discord-divider flex items-center justify-between">
@@ -878,156 +864,6 @@
             renderBatches();
         };
 
-        const toDayKey = (date) => {
-            const local = new Date(date);
-            if (Number.isNaN(local.getTime())) return null;
-            return local.toLocaleDateString('en-CA');
-        };
-
-        const getLastNDays = (count) => {
-            const days = [];
-            const now = new Date();
-            for (let i = count - 1; i >= 0; i -= 1) {
-                const day = new Date(now);
-                day.setDate(now.getDate() - i);
-                days.push(day);
-            }
-            return days;
-        };
-
-        const renderInsights = () => {
-            const volumeTotal = document.getElementById('upload-volume-total');
-            const volumeTrend = document.getElementById('upload-volume-trend');
-            const volumeBars = document.getElementById('upload-volume-bars');
-            const volumeLabels = document.getElementById('upload-volume-labels');
-            const growthTotal = document.getElementById('storage-growth-total');
-            const growthTrend = document.getElementById('storage-growth-trend');
-            const growthLine = document.getElementById('storage-growth-line');
-            const growthArea = document.getElementById('storage-growth-area');
-            const growthLabels = document.getElementById('storage-growth-labels');
-
-            if (!volumeTotal || !volumeTrend || !volumeBars || !volumeLabels
-                || !growthTotal || !growthTrend || !growthLine || !growthArea || !growthLabels) {
-                return;
-            }
-
-            const rawDates = (allBatches || [])
-                .map((batch) => toDayKey(batch.upload_date))
-                .filter(Boolean);
-            const uniqueKeys = Array.from(new Set(rawDates)).sort();
-            const dayKeys = (uniqueKeys.length ? uniqueKeys.slice(-7) : getLastNDays(7).map((day) => toDayKey(day)));
-            const days = dayKeys.map((key) => new Date(key));
-            const byDay = dayKeys.reduce((acc, key) => {
-                acc[key] = { batches: 0, size: 0 };
-                return acc;
-            }, {});
-
-            (allBatches || []).forEach((batch) => {
-                const key = toDayKey(batch.upload_date);
-                if (!key || !(key in byDay)) return;
-                byDay[key].batches += 1;
-                byDay[key].size += Number(batch.total_size || 0);
-            });
-
-            const dailyBatches = dayKeys.map((key) => byDay[key].batches);
-            const dailySize = dayKeys.map((key) => byDay[key].size);
-            const totalBatches = dailyBatches.reduce((sum, val) => sum + val, 0);
-            const totalSize = dailySize.reduce((sum, val) => sum + val, 0);
-            const cumulativeSize = dailySize.reduce((acc, value, index) => {
-                const nextValue = value + (acc[index - 1] || 0);
-                acc.push(nextValue);
-                return acc;
-            }, []);
-
-            volumeTotal.textContent = `${totalBatches} batches`;
-            growthTotal.textContent = `+${formatBytes(totalSize)}`;
-
-            const prevDays = uniqueKeys.length > 7 ? uniqueKeys.slice(-14, -7) : [];
-            const prevBatches = (allBatches || []).reduce((sum, batch) => {
-                const key = toDayKey(batch.upload_date);
-                if (!key || !prevDays.includes(key)) return sum;
-                return sum + 1;
-            }, 0);
-            const prevSize = (allBatches || []).reduce((sum, batch) => {
-                const key = toDayKey(batch.upload_date);
-                if (!key || !prevDays.includes(key)) return sum;
-                return sum + Number(batch.total_size || 0);
-            }, 0);
-
-            const formatTrend = (current, previous, positiveClass, negativeClass) => {
-                if (!previous) {
-                    if (current > 0) {
-                        return { text: '+100%', className: positiveClass };
-                    }
-                    return { text: '0%', className: 'text-discord-light bg-discord-bg/60 border border-discord-divider/60' };
-                }
-                const delta = ((current - previous) / previous) * 100;
-                const sign = delta >= 0 ? '+' : '';
-                return {
-                    text: `${sign}${delta.toFixed(0)}%`,
-                    className: delta >= 0 ? positiveClass : negativeClass,
-                };
-            };
-
-            const volumeTrendInfo = formatTrend(
-                totalBatches,
-                prevBatches,
-                'text-green-400 bg-green-500/10 border border-green-500/20',
-                'text-red-400 bg-red-500/10 border border-red-500/20',
-            );
-            volumeTrend.textContent = volumeTrendInfo.text;
-            volumeTrend.className = `text-xs font-mono px-2 py-1 rounded-full ${volumeTrendInfo.className}`;
-
-            const growthTrendInfo = formatTrend(
-                totalSize,
-                prevSize,
-                'text-green-400 bg-green-500/10 border border-green-500/20',
-                'text-red-400 bg-red-500/10 border border-red-500/20',
-            );
-            growthTrend.textContent = growthTrendInfo.text;
-            growthTrend.className = `text-xs font-mono px-2 py-1 rounded-full ${growthTrendInfo.className}`;
-
-            const maxBatches = Math.max(1, ...dailyBatches);
-            volumeBars.innerHTML = '';
-            dailyBatches.forEach((count, index) => {
-                const height = Math.max(10, Math.round((count / maxBatches) * 96));
-                const bar = document.createElement('div');
-                const tint = index >= 4 ? 'bg-purple-500/60' : 'bg-discord-brand/60';
-                bar.className = `w-6 rounded-lg ${tint}`;
-                bar.style.height = `${height}px`;
-                bar.title = `${count} batches`;
-                volumeBars.appendChild(bar);
-            });
-
-            volumeLabels.innerHTML = '';
-            days.forEach((day) => {
-                const label = document.createElement('span');
-                label.textContent = day.toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: '2-digit',
-                });
-                volumeLabels.appendChild(label);
-            });
-
-            const maxSize = Math.max(1, ...cumulativeSize);
-            const points = cumulativeSize.map((value, index) => {
-                const x = 5 + (index * (190 / 6));
-                const y = 50 - (value / maxSize) * 38;
-                return `${x.toFixed(1)} ${y.toFixed(1)}`;
-            });
-            const linePath = `M${points[0]} ` + points.slice(1).map((point) => `L${point}`).join(' ');
-            growthLine.setAttribute('d', linePath);
-            growthArea.setAttribute('d', `${linePath} L195 60 L5 60 Z`);
-
-            growthLabels.innerHTML = '';
-            const labelValues = [0, maxSize * 0.33, maxSize * 0.66, maxSize];
-            labelValues.forEach((value) => {
-                const label = document.createElement('span');
-                label.textContent = formatBytes(Math.round(value));
-                growthLabels.appendChild(label);
-            });
-        };
-
         const getStatusBadge = (status) => {
             if (status === 'complete') {
                 return `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20">Synced</span>`;
@@ -1203,14 +1039,37 @@
                 allBatches = Array.isArray(batches) ? batches : [];
                 renderBatches();
                 renderActivity();
-                renderInsights();
             } catch (e) { console.log("Batches load error"); }
+        };
+
+        const loadChannels = async () => {
+            try {
+                const res = await fetch('/api/channels');
+                const data = await res.json();
+                const channelSelect = document.getElementById('upload-channel');
+                
+                // Clear existing options except the first (Auto)
+                channelSelect.innerHTML = '<option value="">Auto (Round-Robin Distribution)</option>';
+                
+                // Add channels from config
+                if (data.channels && Array.isArray(data.channels)) {
+                    data.channels.forEach(channel => {
+                        const option = document.createElement('option');
+                        option.value = channel;
+                        option.textContent = channel;
+                        channelSelect.appendChild(option);
+                    });
+                }
+            } catch (e) { 
+                console.log("Channels load error", e); 
+            }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
             switchView('dashboard');
             loadStats();
             loadBatches();
+            loadChannels();
             updateBatchViewToggle(batchView);
         });
 
@@ -1291,6 +1150,7 @@
             formData.append('title', document.getElementById('upload-title').value);
             formData.append('tags', document.getElementById('upload-tags').value);
             formData.append('description', document.getElementById('upload-description').value);
+            formData.append('channel', document.getElementById('upload-channel').value);
             formData.append('confirm', document.getElementById('upload-confirm').checked);
             
             try {
